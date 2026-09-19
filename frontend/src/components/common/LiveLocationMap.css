@@ -1,0 +1,70 @@
+.live-location-map {
+  height: var(--live-map-height, 260px);
+  max-width: 100%;
+  position: relative;
+  isolation: isolate;
+}
+
+.live-location-map--empty {
+  min-height: 220px;
+  padding: 20px;
+  text-align: center;
+}
+
+.live-location-map__canvas {
+  height: 100%;
+  width: 100%;
+  background: #e5e7eb;
+}
+
+.live-map-icon-wrapper {
+  background: transparent;
+  border: 0;
+}
+
+.live-map-driver {
+  align-items: center;
+  background: #c9182b;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
+  color: #fff;
+  display: flex;
+  font-size: 18px;
+  height: 36px;
+  justify-content: center;
+  line-height: 1;
+  transform: rotate(var(--bearing));
+  transition: transform 800ms ease, left 800ms ease, top 800ms ease;
+  width: 36px;
+}
+
+.live-map-point {
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgb(0 0 0 / 35%);
+  display: block;
+  height: 18px;
+  width: 18px;
+}
+
+.live-map-point--pickup { background: #16a34a; }
+.live-map-point--destination { background: #2563eb; }
+
+@media (max-width: 639px) {
+  .live-location-map {
+    height: clamp(220px, 52vw, 300px);
+  }
+
+  .leaflet-control-zoom a {
+    align-items: center;
+    display: flex;
+    height: 36px !important;
+    justify-content: center;
+    width: 36px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-map-driver { transition: none; }
+}

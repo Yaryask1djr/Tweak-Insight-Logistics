@@ -1,0 +1,80 @@
+# ==========================================================
+# Environment & Secrets (CRITICAL: never commit credentials)
+# ==========================================================
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.dist
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ==========================================================
+# Dependency directories
+# ==========================================================
+/backend/vendor/
+/frontend/node_modules/
+
+# ==========================================================
+# Storage, Logs, Cache, Exports, Uploads
+# ==========================================================
+/backend/storage/**
+!/backend/storage/.htaccess
+!/backend/storage/.gitkeep
+!/backend/storage/cache/.gitkeep
+!/backend/storage/logs/.gitkeep
+!/backend/storage/exports/.gitkeep
+!/backend/storage/rate_limits/.gitkeep
+!/backend/storage/client-kyc/.gitkeep
+!/backend/storage/driver-documents/.gitkeep
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================================
+# Production build artifacts
+# (frontend/build is intermediate; authoritative build lives
+# in backend/public/static after `npm run build:backend`)
+# ==========================================================
+/frontend/build/
+
+# ==========================================================
+# IDE, Editor & OS artifacts
+# ==========================================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==========================================================
+# Database / Backup / SQL dumps
+# ==========================================================
+*.sql
+!backend/database/*.sql
+*.dump
+*.sql.gz
+*.tar.gz
+*.zip
+
+# ==========================================================
+# Web server & htpasswd files
+# ==========================================================
+.htpasswd
+nginx.conf.bak
+httpd.conf.bak
+
+# ==========================================================
+# Composer / npm lockfiles override flags
+# (keep composer.lock and package-lock.json per PHP/React best
+# practice; ignore only temporary caches below)
+# ==========================================================
+.cache/
+.parcel-cache/
+.eslintcache

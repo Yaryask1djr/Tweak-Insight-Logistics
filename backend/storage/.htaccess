@@ -1,0 +1,18 @@
+# Defence in depth only: production must use backend/public as DocumentRoot.
+# If this directory is accidentally exposed by Apache, deny all reads and
+# disable CGI handlers so uploaded content cannot execute.
+Options -Indexes -ExecCGI
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
+
+<IfModule mod_mime.c>
+    RemoveHandler .php .phtml .php3 .php4 .php5 .phar .cgi .pl .py .jsp .asp .aspx .sh
+    RemoveType .php .phtml .php3 .php4 .php5 .phar .cgi .pl .py .jsp .asp .aspx .sh
+</IfModule>

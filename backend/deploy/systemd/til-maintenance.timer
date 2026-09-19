@@ -1,0 +1,13 @@
+[Unit]
+Description=Tweak Insight Logistics - Nightly Maintenance Timer
+Requires=til-maintenance.service
+
+[Timer]
+# 02:17 local time — nightly (purging stale sessions, expired KYC docs, location events, rate-limit buckets
+OnCalendar=*-*-* 02:17:00
+Persistent=true
+RandomizedDelaySec=300
+Unit=til-maintenance.service
+
+[Install]
+WantedBy=timers.target

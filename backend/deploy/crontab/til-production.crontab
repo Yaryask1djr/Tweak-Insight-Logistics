@@ -1,0 +1,23 @@
+# ==========================================================================
+# Tweak Insight Logistics — Production Crontab
+# Install with:
+#   sudo crontab -u www-data backend/deploy/crontab/til-production.crontab
+# Or concatenate with existing www-data crontab.
+#
+# SERVER_TIMEZONE should match the MySQL server & PHP date.timezone.
+# Nigeria is UTC+1 (WAT) — server is strongly recommended to run with UTC clocks
+# ==========================================================================
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+# --------------------------------------------------------------------------
+# 1) Nightly maintenance purge + 02:17 UTC — purge stale DB rows & storage files
+# --------------------------------------------------------------------------
+17 2 * * *  cd /var/www/tweak-insight-logistics/backend && /usr/bin/php scripts/run_all_maintenance.php >> storage/logs/maintenance.log 2>&1
+#
+# --------------------------------------------------------------------------
+# 2) Worker daemon health-check every 5 minutes — ensure queue worker daemon heartbeat writer
+#    (only needed if systemd/supervisor is NOT managing the worker; for
+#    systemd the Restart=always already handles auto-recovery)
+# --------------------------------------------------------------------------
+*/5 * * * *  cd /var/www/tweak-insight-logistics/backend && flock -n /tmp/til-worker-check.lock /usr/bin/php scripts/ensure_worker_running.php >> storage/logs/worker-watchdog.log 2>&1

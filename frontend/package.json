@@ -1,0 +1,44 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@tanstack/react-query": "^5.102.8",
+    "axios": "^1.6.8",
+    "bootstrap": "^5.3.3",
+    "concurrently": "^8.2.0",
+    "leaflet": "^1.9.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
+    "react-leaflet": "^4.2.1",
+    "react-router-dom": "^6.22.3",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "proxy": "http://localhost:8000",
+  "scripts": {
+    "dev": "concurrently \"cd ../backend && php -S localhost:8000 router.php\" \"cross-env PORT=3000 react-scripts start\"",
+    "start": "cross-env PORT=3000 react-scripts start",
+    "start:prod": "cd ../backend && php -S localhost:8000 router.php",
+    "build": "react-scripts build",
+    "build:backend": "npm run build && node scripts/deploy-backend-build.js",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}

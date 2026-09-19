@@ -1,0 +1,56 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # React Router Single Page Application Fallback
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.html [QSA,L]
+</IfModule>
+
+# =====================================================
+# Aggressive Browser & CDN Cache-Control Headers
+# =====================================================
+<IfModule mod_headers.c>
+    # 1 Year Cache for Static Images (WebP, PNG, JPG, ICO, SVG, AVIF)
+    <FilesMatch "\.(webp|png|jpe?g|gif|ico|svg|avif)$">
+        Header set Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+
+    # 1 Year Cache for Bundled & Versioned JS and CSS
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+
+    # 1 Year Cache for Web Fonts
+    <FilesMatch "\.(woff|woff2|ttf|eot|otf)$">
+        Header set Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+
+    # HTML Pages (index.html) Must Revalidate to Pick Up New JS/CSS Chunks Immediately
+    <FilesMatch "\.(html|htm)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </FilesMatch>
+
+    # Security Headers
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(self), camera=(self), microphone=()"
+    Header set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+</IfModule>
+
+# =====================================================
+# Gzip / Deflate Compression
+# =====================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript
+    AddOutputFilterByType DEFLATE application/javascript application/x-javascript application/json
+    AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml
+    AddOutputFilterByType DEFLATE image/svg+xml font/ttf font/otf font/woff font/woff2
+</IfModule>

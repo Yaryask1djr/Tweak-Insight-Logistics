@@ -1,0 +1,36 @@
+﻿[Unit]
+Description=Tweak Insight Logistics - Background Queue Worker Daemon
+Documentation=https://github.com/tweak-insight/logistics
+After=network.target mysql.service redis.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/tweak-insight-logistics/backend
+ExecStart=/usr/bin/php /var/www/tweak-insight-logistics/backend/scripts/queue_worker.php --queue=default --sleep=2 --memory-limit=128 --max-jobs=1000
+
+# Auto-restart on crash or graceful recycle
+Restart=always
+RestartSec=3
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Process Resource Limits
+LimitNOFILE=65536
+
+# Security Hardening
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Systemd Journal Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=til-queue-worker
+
+[Install]
+WantedBy=multi-user.target

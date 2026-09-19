@@ -1,0 +1,75 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # SECURITY BOUNDARY — backend/ must never be a public file browser.
+    # Production DocumentRoot belongs at backend/public. These rules remain as
+    # defence in depth for an incorrectly configured legacy virtual host.
+    # They must execute before the "real file" bypass below.
+    RewriteRule ^(?:storage|config|controllers|database|docs|helpers|scripts|vendor)(?:/|$) - [F,L,NC]
+    RewriteRule ^(?:\.git|\.svn)(?:/|$) - [F,L,NC]
+    RewriteRule ^(?:\.env(?:\..*)?|bootstrap\.php|router\.php|composer\.(?:json|lock)|phpunit\.xml(?:\.dist)?)$ - [F,L,NC]
+
+    # PRODUCTION: Force HTTPS everywhere + HSTS preload pre-redirect for clients
+    # that don't yet have the cached HSTS rule. Disable if TLS is terminated by
+    # Cloudflare/CDN with "Always Use HTTPS" enabled at the edge instead.
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Front Controller Routing
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# =====================================================
+# CDN & Browser Cache-Control Headers
+# =====================================================
+<IfModule mod_headers.c>
+    # 1 Year Cache for Static Images (WebP, PNG, JPG, ICO, SVG)
+    <FilesMatch "\.(webp|png|jpe?g|gif|ico|svg|avif)$">
+        Header set Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+
+    # 1 Month Cache for CSS and JavaScript
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "public, max-age=2592000, s-maxage=2592000, stale-while-revalidate=86400"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+
+    # 1 Year Cache for Web Fonts
+    <FilesMatch "\.(woff|woff2|ttf|eot|otf)$">
+        Header set Cache-Control "public, max-age=31536000, s-maxage=31536000, immutable"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+
+    # Disable CDN Caching on Dynamic API Endpoints
+    <FilesMatch "\.(php)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+
+    # Security Headers (MUST mirror backend/helpers/security_headers.php exactly)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "DENY"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(self), camera=(self), microphone=()"
+    Header always set X-Permitted-Cross-Domain-Policies "none"
+    Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+</IfModule>
+
+# =====================================================
+# Gzip / Brotli Compression for Text and Assets
+# =====================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript
+    AddOutputFilterByType DEFLATE application/javascript application/x-javascript application/json
+    AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml
+    AddOutputFilterByType DEFLATE image/svg+xml font/ttf font/otf font/woff font/woff2
+</IfModule>
+
+# Never expose directory listings from a legacy backend document root.
+Options -Indexes

@@ -1,0 +1,30 @@
+{
+  "short_name": "Tweak Insight",
+  "name": "Tweak Insight Logistics",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "32x32 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "favicon-32x32.png",
+      "type": "image/png",
+      "sizes": "32x32"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#c9182b",
+  "background_color": "#ffffff"
+}
