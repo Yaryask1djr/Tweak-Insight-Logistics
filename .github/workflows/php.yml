@@ -2,38 +2,67 @@ name: PHP Composer
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+        shell: bash
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Validate composer.json and composer.lock
-      run: composer validate --strict
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo_sqlite
+          tools: composer:v2
+          coverage: none
 
-    - name: Cache Composer packages
-      id: composer-cache
-      uses: actions/cache@v3
-      with:
-        path: vendor
-        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-php-
+      - name: Validate application manifest and lockfile
+        # This is an application, not a Packagist package. Keep schema and
+        # lockfile errors fatal; leave metadata/version-policy warnings visible.
+        run: composer validate --no-check-publish
 
-    - name: Install dependencies
-      run: composer install --prefer-dist --no-progress
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: backend/vendor
+          key: ${{ runner.os }}-php-8.2-composer-${{ hashFiles('backend/composer.lock') }}
 
-    # Add a test script to composer.json, for instance: "test": "vendor/bin/phpunit"
-    # Docs: https://getcomposer.org/doc/articles/scripts.md
+      - name: Install locked dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
 
-    # - name: Run test suite
-    #   run: composer run-script test
+      - name: Check installed platform requirements
+        run: composer check-platform-reqs
+
+      - name: Check PHP syntax
+        run: find . -path ./vendor -prune -o -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l
+
+      - name: Run isolated backend regression checks
+        # SQLite fixtures and simulated payment provider: no production
+        # credentials, native MySQL contention checks or real provider calls.
+        run: |
+          for test in \
+            tests/verify_audit_helpers.php \
+            tests/verify_atomic_booking.php \
+            tests/verify_delivery_payments.php \
+            tests/verify_driver_delivery_progress.php \
+            tests/verify_delivery_resolution.php \
+            tests/verify_runtime_boundaries.php \
+            tests/verify_refresh_and_exports.php \
+            tests/verify_enterprise_boundaries.php
+          do
+            php -d zend.assertions=1 -d assert.exception=1 "$test"
+          done
