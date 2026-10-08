@@ -7,6 +7,7 @@ import { CardGridSkeleton } from '../common/SkeletonLoader';
 import Icon from '../common/Icon';
 import { triggerActionTapHaptic } from '../../utils/haptics';
 import QueryState from '../common/QueryState';
+import SensitiveValue from '../common/SensitiveValue';
 
 const AvailableJobsTab = () => {
     const [page, setPage] = useState(1);
@@ -141,8 +142,7 @@ const AvailableJobsTab = () => {
                                                 {job.delivery_address}
                                             </div>
                                             <div>
-                                                👤 <strong>Sender:</strong> {job.client_name} (
-                                                {job.client_phone})
+                                                👤 <strong>Sender:</strong> {job.client_name}{job.client_phone ? <span> (<SensitiveValue value={job.client_phone} kind="phone" label="sender phone" />)</span> : ''}
                                             </div>
                                         </div>
 

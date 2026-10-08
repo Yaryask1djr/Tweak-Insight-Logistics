@@ -56,11 +56,31 @@ class Logger
     }
 
     /**
+     * Log a debug message (suppressed in production unless APP_DEBUG=true).
+     */
+    public static function debug(string $message, array $context = []): void
+    {
+        $isProduction = (getenv('APP_ENV') === 'production');
+        $debugEnabled = (getenv('APP_DEBUG') === 'true' || getenv('APP_DEBUG') === '1');
+        if (!$isProduction || $debugEnabled) {
+            self::write('DEBUG', $message, $context);
+        }
+    }
+
+    /**
      * Log an informational message.
      */
     public static function info(string $message, array $context = []): void
     {
         self::write('INFO', $message, $context);
+    }
+
+    /**
+     * Log a normal but significant event.
+     */
+    public static function notice(string $message, array $context = []): void
+    {
+        self::write('NOTICE', $message, $context);
     }
 
     /**
@@ -72,11 +92,19 @@ class Logger
     }
 
     /**
-     * Log an error.
+     * Log a runtime error.
      */
     public static function error(string $message, array $context = []): void
     {
         self::write('ERROR', $message, $context);
+    }
+
+    /**
+     * Log a critical operational condition.
+     */
+    public static function critical(string $message, array $context = []): void
+    {
+        self::write('CRITICAL', $message, $context);
     }
 
     /**

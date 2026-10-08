@@ -296,12 +296,14 @@ const ClientDashboard = () => {
 
                     {/* Main Content Area */}
                     <main className="col-lg-9 col-md-8 dashboard-main">
-                        <KycStatusBanner 
-                            status={kyc?.kyc_status} 
-                            rejectionReason={kyc?.kyc_rejection_reason} 
-                            onAction={() => setActiveTab('kyc')} 
-                        />
-                        
+                        {kyc?.kyc_status !== 'verified' && (
+                            <KycStatusBanner
+                                status={kyc?.kyc_status}
+                                rejectionReason={kyc?.kyc_rejection_reason}
+                                onAction={() => setActiveTab('kyc')}
+                            />
+                        )}
+
                         <ErrorBoundary
                             resetKey={activeTab}
                             fallbackTitle="Client Panel Unavailable"
@@ -310,12 +312,14 @@ const ClientDashboard = () => {
                             {activeTab === 'overview' && (
                                 <ClientOverviewTab
                                     user={user}
+                                    kyc={kyc}
                                     deliveries={deliveries}
                                     loading={historyLoading}
                                     onBook={() => setActiveTab(isKycVerified ? 'book' : 'kyc')}
                                     onViewAll={() => { setStatusFilter('all'); setActiveTab('history'); }}
                                     onTrack={handleTrackDelivery}
                                     onSelectStatusFilter={(filter) => { setStatusFilter(filter); setActiveTab('history'); }}
+                                    onNavigateTab={setActiveTab}
                                 />
                             )}
 

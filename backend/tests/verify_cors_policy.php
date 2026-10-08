@@ -14,8 +14,10 @@ assert(in_array($origin1, $allowedOrigins, true) === true, 'Whitelisted origin h
 $origin2 = 'https://app.tweakinsight.com';
 assert(in_array($origin2, $allowedOrigins, true) === true, 'Whitelisted origin https://app.tweakinsight.com was not allowed.');
 
-// Case 2: Untrusted Origin
-$untrustedOrigin = 'https://malicious-phishing-site.com';
-assert(in_array($untrustedOrigin, $allowedOrigins, true) === false, 'Untrusted origin should not be in allowed list.');
+// Case 3: SecurityConfig helper method
+$resolvedOrigins = SecurityConfig::getAllowedOrigins();
+assert(is_array($resolvedOrigins) && count($resolvedOrigins) > 0, 'SecurityConfig::getAllowedOrigins() must return a non-empty array.');
+assert(in_array('https://app.tweakinsight.com', $resolvedOrigins, true), 'Default allowed origins must include primary domain.');
+assert(!in_array('https://malicious-phishing-site.com', $resolvedOrigins, true), 'Untrusted origins must be rejected by resolver.');
 
 echo "CORS whitelist policy verification passed.\n";

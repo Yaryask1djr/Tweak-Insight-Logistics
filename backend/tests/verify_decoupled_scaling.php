@@ -41,6 +41,9 @@ echo "✓ StorageAdapter operations verified successfully.\n";
 // configuration intentionally fails closed when Redis or its database migration
 // is unavailable; this isolated storage test must not mutate rate-limit state.
 Logger::info('Decoupled scaling test message', ['module' => 'test', 'status' => 'verified']);
-echo "✓ Logger structured JSON streaming verified.\n";
+Logger::debug('Decoupled scaling debug message', ['module' => 'test', 'status' => 'debug_verified']);
+Logger::notice('Decoupled scaling notice message', ['module' => 'test', 'status' => 'notice_verified']);
+Logger::critical('Decoupled scaling critical message', ['module' => 'test', 'status' => 'critical_verified']);
+echo "✓ Logger structured JSON streaming (info, debug, notice, critical) verified.\n";
 
 echo "\nAll 2.1 Decoupled Local Disk State tests passed successfully.\n";

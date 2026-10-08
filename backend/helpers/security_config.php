@@ -72,6 +72,51 @@ final class SecurityConfig
         return null;
     }
 
+    public static function getAllowedOrigins(): array
+    {
+        $allowedEnv = trim((string)getenv('ALLOWED_ORIGINS'));
+        if ($allowedEnv !== '') {
+            $origins = array_values(array_filter(array_map('trim', explode(',', $allowedEnv))));
+            if (!empty($origins)) {
+                return $origins;
+            }
+        }
+
+        if (self::isProductionLike()) {
+            $baseUrl = trim((string)getenv('BASE_URL'));
+            if ($baseUrl !== '' && !self::isPlaceholder($baseUrl)) {
+                $parsed = parse_url($baseUrl);
+                if (!empty($parsed['scheme']) && !empty($parsed['host'])) {
+                    $origin = $parsed['scheme'] . '://' . $parsed['host'] . (!empty($parsed['port']) ? ':' . $parsed['port'] : '');
+                    return [$origin];
+                }
+            }
+            return ['https://app.tweakinsight.com', 'https://tweakinsight.com'];
+        }
+
+        return [
+            'http://localhost:3000',
+            'http://127.0.0.1:3000',
+            'http://localhost:8000',
+            'http://127.0.0.1:8000',
+            'https://app.tweakinsight.com',
+        ];
+    }
+
+    public static function productionEnvironmentError(): ?string
+    {
+        if (!self::isProductionLike()) {
+            return null;
+        }
+
+        $debug = strtolower(trim((string)getenv('APP_DEBUG')));
+        if ($debug === 'true' || $debug === '1') {
+            return 'APP_DEBUG must be false in production environments to avoid leaking debug traces.';
+        }
+
+        return null;
+    }
+
     public static function isPlaceholderValue(?string $value): bool
     {
         return self::isPlaceholder((string) $value);

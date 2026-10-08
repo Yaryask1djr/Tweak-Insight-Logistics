@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../api/client';
 import LiveLocationMap from '../common/LiveLocationMap';
 import { showToast } from '../common/Toast';
+import SensitiveValue from '../common/SensitiveValue';
 
 const TrackingModal = ({ delivery, onClose }) => {
     const statuses = [
@@ -318,12 +319,9 @@ const TrackingModal = ({ delivery, onClose }) => {
                                                 {delivery.delivery_person_name || 'Awaiting rider assignment'}
                                             </div>
                                             {delivery.delivery_person_phone ? (
-                                                <a 
-                                                    href={`tel:${delivery.delivery_person_phone}`} 
-                                                    className="small text-primary text-decoration-none fw-semibold"
-                                                >
-                                                    📞 {delivery.delivery_person_phone}
-                                                </a>
+                                                <span className="small text-primary fw-semibold d-inline-flex align-items-center gap-1">
+                                                    📞 <SensitiveValue value={delivery.delivery_person_phone} kind="phone" label="rider phone" />
+                                                </span>
                                             ) : (
                                                 <small className="text-muted">Operations automated dispatch</small>
                                             )}
@@ -361,12 +359,12 @@ const TrackingModal = ({ delivery, onClose }) => {
                                         <div className="col-sm-6 border-end-sm">
                                             <span className="text-muted d-block" style={{ fontSize: '0.75rem' }}>📍 Origin (Pickup):</span>
                                             <strong className="d-block text-dark">{delivery.pickup_address}</strong>
-                                            <small className="text-muted">Contact: {delivery.pickup_contact_name} ({delivery.pickup_contact_phone || 'Account'})</small>
+                                            <small className="text-muted">Contact: {delivery.pickup_contact_name} {delivery.pickup_contact_phone ? <span>(<SensitiveValue value={delivery.pickup_contact_phone} kind="phone" label="pickup contact phone" />)</span> : '(Account)'}</small>
                                         </div>
                                         <div className="col-sm-6 ps-sm-3">
                                             <span className="text-muted d-block" style={{ fontSize: '0.75rem' }}>🏁 Destination:</span>
                                             <strong className="d-block text-dark">{delivery.delivery_address}</strong>
-                                            <small className="text-muted">Recipient: {delivery.delivery_contact_name} ({delivery.delivery_contact_phone})</small>
+                                            <small className="text-muted">Recipient: {delivery.delivery_contact_name} {delivery.delivery_contact_phone ? <span>(<SensitiveValue value={delivery.delivery_contact_phone} kind="phone" label="recipient phone" />)</span> : ''}</small>
                                         </div>
                                     </div>
                                 </div>

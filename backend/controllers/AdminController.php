@@ -26,11 +26,13 @@ class AdminController
 
         $stmt = $db->prepare("SELECT u.id, u.full_name, u.email, u.phone, u.address, u.created_at,
                               d.kyc_status,
-                              (SELECT COUNT(*) FROM driver_documents dd WHERE dd.driver_id = d.id AND dd.verification_status = 'pending') AS pending_documents,
-                              (SELECT COUNT(DISTINCT dd.document_type) FROM driver_documents dd WHERE dd.driver_id = d.id AND dd.document_type IN ('government_id', 'drivers_license') AND dd.verification_status = 'verified') AS verified_mandatory_documents
+                              COUNT(CASE WHEN dd.verification_status = 'pending' THEN 1 END) AS pending_documents,
+                              COUNT(DISTINCT CASE WHEN dd.document_type IN ('government_id', 'drivers_license') AND dd.verification_status = 'verified' THEN dd.document_type END) AS verified_mandatory_documents
                               FROM users u
                               LEFT JOIN drivers d ON d.user_id = u.id
+                              LEFT JOIN driver_documents dd ON dd.driver_id = d.id
                               WHERE u.role = 'delivery' AND u.is_approved = 0 AND COALESCE(d.kyc_status, 'not_submitted') <> 'rejected'{$cursorClause}
+                              GROUP BY u.id, u.full_name, u.email, u.phone, u.address, u.created_at, d.kyc_status
                               ORDER BY u.id DESC
                               LIMIT :limit");
         if ($cursor !== null) $stmt->bindValue(':cursor', $cursor, PDO::PARAM_INT);
@@ -115,7 +117,11 @@ class AdminController
         $whereClause = "";
         $params = [];
 
+        $allowedRoles = ['client', 'delivery', 'admin'];
         if ($role !== 'all' && !empty($role)) {
+            if (!in_array($role, $allowedRoles, true)) {
+                Response::error('Invalid user role specified.', 422);
+            }
             $whereClause = "WHERE role = :role";
             $params['role'] = $role;
         }
@@ -297,12 +303,13 @@ class AdminController
             $stmt->execute();
             $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $nextCursor = !empty($deliveries) ? (int)end($deliveries)['id'] : null;
+            $hasMore = count($deliveries) === $limit;
+            $nextCursor = $hasMore && !empty($deliveries) ? (int)end($deliveries)['id'] : null;
 
             Response::json([
                 'deliveries'  => $deliveries,
                 'next_cursor' => $nextCursor,
-                'has_more'    => count($deliveries) === $limit,
+                'has_more'    => $hasMore,
             ], 'Deliveries retrieved.');
             return;
         }
@@ -442,12 +449,17 @@ class AdminController
             SELECT dd.id, dd.document_type, dd.document_number, dd.expires_at, dd.created_at,
                    d.id AS driver_id, d.vehicle_type, d.vehicle_registration, d.kyc_status,
                    u.id AS user_id, u.full_name, u.email, u.phone, u.created_at AS user_created_at,
-                   (SELECT COUNT(DISTINCT dd_sub.document_type) FROM driver_documents dd_sub 
-                    WHERE dd_sub.driver_id = d.id AND dd_sub.document_type IN ('government_id', 'drivers_license') 
-                    AND dd_sub.verification_status = 'verified') AS verified_mandatory_docs
+                   COALESCE(v.verified_count, 0) AS verified_mandatory_docs
             FROM driver_documents dd 
             JOIN drivers d ON d.id = dd.driver_id 
             JOIN users u ON u.id = d.user_id 
+            LEFT JOIN (
+                SELECT driver_id, COUNT(DISTINCT document_type) AS verified_count
+                FROM driver_documents
+                WHERE document_type IN ('government_id', 'drivers_license') 
+                  AND verification_status = 'verified'
+                GROUP BY driver_id
+            ) v ON v.driver_id = d.id
             WHERE dd.verification_status = 'pending' 
             ORDER BY dd.created_at ASC 
             LIMIT :limit OFFSET :offset
@@ -561,19 +573,78 @@ class AdminController
     public static function auditLog(PDO $db): void
     {
         OperationsSchema::requireTables($db, ['audit_logs']);
-        $page = max(1, (int)($_GET['page'] ?? 1)); $limit = max(1, min(100, (int)($_GET['limit'] ?? 25))); $offset = ($page - 1) * $limit;
+        $limit  = max(1, min(100, (int)($_GET['limit'] ?? 25)));
+        $cursor = isset($_GET['cursor']) ? (int)$_GET['cursor'] : null;
+
+        // Build dynamic WHERE conditions (shared by all paths)
         $where = []; $params = [];
-        foreach (['action', 'actor_role'] as $field) if (($value = trim($_GET[$field] ?? '')) !== '') { $where[] = "a.{$field}" . ($field === 'action' ? ' LIKE' : ' =') . " :{$field}"; $params[$field] = $field === 'action' ? "%{$value}%" : $value; }
+        foreach (['action', 'actor_role'] as $field) {
+            if (($value = trim($_GET[$field] ?? '')) !== '') {
+                $where[]        = "a.{$field}" . ($field === 'action' ? ' LIKE' : ' =') . " :{$field}";
+                $params[$field] = $field === 'action' ? "%{$value}%" : $value;
+            }
+        }
         if (($deliveryId = (int)($_GET['delivery_id'] ?? 0)) > 0) { $where[] = 'a.delivery_id = :delivery_id'; $params['delivery_id'] = $deliveryId; }
-        if (($from = trim($_GET['from'] ?? '')) !== '') { $where[] = 'a.created_at >= :from_date'; $params['from_date'] = $from . ' 00:00:00'; }
-        if (($to = trim($_GET['to'] ?? '')) !== '') { $where[] = 'a.created_at < DATE_ADD(:to_date, INTERVAL 1 DAY)'; $params['to_date'] = $to; }
+        if (($from = trim($_GET['from'] ?? '')) !== '') { $where[] = 'a.created_at >= :from_date';  $params['from_date'] = $from . ' 00:00:00'; }
+        if (($to   = trim($_GET['to']   ?? '')) !== '') { $where[] = 'a.created_at < DATE_ADD(:to_date, INTERVAL 1 DAY)'; $params['to_date'] = $to; }
+
+        $cols = "a.id, a.action, a.entity_type, a.entity_id, a.delivery_id, a.actor_role, a.created_at, u.full_name AS actor_name";
+        $join = "FROM audit_logs a LEFT JOIN users u ON u.id = a.actor_user_id";
+
+        // ── CSV export (always offset, up to 10 000 rows) ────────────────────
+        if (($_GET['format'] ?? '') === 'csv') {
+            $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+            $csv = $db->prepare("SELECT {$cols} {$join} {$whereSql} ORDER BY a.created_at DESC LIMIT 10000");
+            $csv->execute($params);
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="operations-audit.csv"');
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['Time', 'Action', 'Actor role', 'Actor', 'Record', 'Delivery']);
+            foreach ($csv->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                fputcsv($out, [$row['created_at'], $row['action'], $row['actor_role'], $row['actor_name'], $row['entity_type'] . ' #' . $row['entity_id'], $row['delivery_id']]);
+            }
+            fclose($out);
+            exit;
+        }
+
+        // ── Keyset cursor path ────────────────────────────────────────────────
+        if ($cursor !== null) {
+            $where[]          = 'a.id < :cursor';
+            $params['cursor'] = $cursor;
+            $whereSql         = 'WHERE ' . implode(' AND ', $where);
+            $stmt = $db->prepare("SELECT {$cols} {$join} {$whereSql} ORDER BY a.id DESC LIMIT :limit");
+            foreach ($params as $key => $value) $stmt->bindValue(':' . $key, $value);
+            $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
+            $stmt->execute();
+            $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $hasMore    = count($logs) > $limit;
+            if ($hasMore) { array_pop($logs); }
+            $nextCursor = $hasMore ? (int)end($logs)['id'] : null;
+
+            Response::json([
+                'logs'        => $logs,
+                'next_cursor' => $nextCursor,
+                'has_more'    => $hasMore,
+            ], 'Operations audit records retrieved.');
+            return;
+        }
+
+        // ── Offset fallback (backward compatibility) ──────────────────────────
+        $page     = max(1, (int)($_GET['page'] ?? 1));
+        $offset   = ($page - 1) * $limit;
         $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-        $base = "SELECT a.id, a.action, a.entity_type, a.entity_id, a.delivery_id, a.actor_role, a.created_at, u.full_name AS actor_name FROM audit_logs a LEFT JOIN users u ON u.id = a.actor_user_id {$whereSql} ORDER BY a.created_at DESC";
-        if (($_GET['format'] ?? '') === 'csv') { $csv = $db->prepare($base . ' LIMIT 10000'); $csv->execute($params); header('Content-Type: text/csv'); header('Content-Disposition: attachment; filename="operations-audit.csv"'); $out = fopen('php://output', 'w'); fputcsv($out, ['Time', 'Action', 'Actor role', 'Actor', 'Record', 'Delivery']); foreach ($csv->fetchAll(PDO::FETCH_ASSOC) as $row) fputcsv($out, [$row['created_at'], $row['action'], $row['actor_role'], $row['actor_name'], $row['entity_type'] . ' #' . $row['entity_id'], $row['delivery_id']]); fclose($out); exit; }
-        $count = $db->prepare("SELECT COUNT(*) FROM audit_logs a {$whereSql}"); $count->execute($params); $total = (int)$count->fetchColumn();
+        $base     = "SELECT {$cols} {$join} {$whereSql} ORDER BY a.created_at DESC";
+
+        $count = $db->prepare("SELECT COUNT(*) FROM audit_logs a {$whereSql}");
+        $count->execute($params);
+        $total = (int)$count->fetchColumn();
+
         $statement = $db->prepare($base . ' LIMIT :limit OFFSET :offset');
         foreach ($params as $key => $value) $statement->bindValue(':' . $key, $value);
-        $statement->bindValue(':limit', $limit, PDO::PARAM_INT); $statement->bindValue(':offset', $offset, PDO::PARAM_INT); $statement->execute();
+        $statement->bindValue(':limit',  $limit,  PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $statement->execute();
         Response::paginated($statement->fetchAll(PDO::FETCH_ASSOC), $total, $page, $limit, 'Operations audit records retrieved.');
     }
 
@@ -747,10 +818,13 @@ class AdminController
         $stmt = $db->prepare("
             SELECT c.id AS client_id, c.kyc_status, c.kyc_rejection_reason, c.updated_at,
                    u.id AS user_id, u.full_name, u.email, u.phone, u.created_at AS registered_at,
-                   (SELECT COUNT(*) FROM client_kyc_documents ckd WHERE ckd.client_id = c.id) AS doc_count
+                   COUNT(ckd.id) AS doc_count
             FROM clients c
             JOIN users u ON u.id = c.user_id
+            LEFT JOIN client_kyc_documents ckd ON ckd.client_id = c.id
             WHERE c.kyc_status IN ('submitted','under_review')
+            GROUP BY c.id, c.kyc_status, c.kyc_rejection_reason, c.updated_at,
+                     u.id, u.full_name, u.email, u.phone, u.created_at
             ORDER BY c.updated_at ASC
             LIMIT :limit OFFSET :offset
         ");

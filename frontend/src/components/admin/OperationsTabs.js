@@ -5,6 +5,7 @@ import { showToast } from '../common/Toast';
 import { TableSkeleton } from '../common/SkeletonLoader';
 import QueryState from '../common/QueryState';
 import Pagination from '../common/Pagination';
+import SensitiveValue from '../common/SensitiveValue';
 
 export const UsersTab = () => {
     const [limit, setLimit] = useState(15);
@@ -80,7 +81,7 @@ export const UsersTab = () => {
                                                 {user.role}
                                             </span>
                                         </td>
-                                        <td>{user.phone}</td>
+                                        <td><SensitiveValue value={user.phone} kind="phone" label="user phone" /></td>
                                         <td>
                                             <span
                                                 className={`badge ${
@@ -250,7 +251,7 @@ export const FleetTab = () => {
                                         <td>
                                             <strong>{driver.full_name}</strong>
                                             <small className="d-block text-muted">
-                                                {driver.phone}
+                                                <SensitiveValue value={driver.phone} kind="phone" label="driver phone" />
                                             </small>
                                         </td>
                                         <td>

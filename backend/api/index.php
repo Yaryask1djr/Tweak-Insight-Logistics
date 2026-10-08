@@ -27,11 +27,10 @@ SecurityHeaders::send();
 
 // Dynamic Whitelisted CORS Configuration
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-$defaultOrigins = 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000';
-$allowedEnv = getenv('ALLOWED_ORIGINS') ?: $defaultOrigins;
-$allowedOrigins = array_map('trim', explode(',', $allowedEnv));
+$allowedOrigins = SecurityConfig::getAllowedOrigins();
+$isAllowedOrigin = (!empty($origin) && in_array($origin, $allowedOrigins, true));
 
-if (!empty($origin) && in_array($origin, $allowedOrigins, true)) {
+if ($isAllowedOrigin) {
     header("Access-Control-Allow-Origin: {$origin}");
     header("Access-Control-Allow-Credentials: true");
     header("Vary: Origin");
@@ -44,6 +43,15 @@ header("Content-Type: application/json; charset=UTF-8");
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    if (!empty($origin) && !$isAllowedOrigin) {
+        http_response_code(403);
+        echo json_encode([
+            'status' => 'error',
+            'code' => 403,
+            'message' => 'Origin not permitted by CORS policy.',
+        ], JSON_UNESCAPED_SLASHES);
+        exit;
+    }
     http_response_code(204);
     exit;
 }

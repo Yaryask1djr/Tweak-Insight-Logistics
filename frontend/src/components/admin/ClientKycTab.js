@@ -5,6 +5,7 @@ import { showToast } from '../common/Toast';
 import { TableSkeleton } from '../common/SkeletonLoader';
 import Pagination from '../common/Pagination';
 import QueryState from '../common/QueryState';
+import SensitiveValue from '../common/SensitiveValue';
 
 const ClientKycTab = () => {
     const [page, setPage] = useState(1);
@@ -157,8 +158,8 @@ const ClientKycTab = () => {
                             <div className="d-flex justify-content-between gap-2 mb-3">
                                 <div>
                                     <h5 className="fw-bold mb-1">{profile.full_name}</h5>
-                                    <div className="small text-muted">
-                                        {profile.email} · {profile.phone}
+                                    <div className="small text-muted d-flex align-items-center gap-1 flex-wrap">
+                                        <SensitiveValue value={profile.email} kind="email" label="client email" /> · <SensitiveValue value={profile.phone} kind="phone" label="client phone" />
                                     </div>
                                     <div className="small text-muted mt-1">
                                         {profile.address || 'No address provided'}

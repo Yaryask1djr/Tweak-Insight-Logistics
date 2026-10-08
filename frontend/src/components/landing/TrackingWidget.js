@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { apiClient, authHeaders } from '../../api/client';
+import SensitiveValue from '../common/SensitiveValue';
 
 /**
  * Formats a timestamp into a friendly relative time difference.
@@ -375,9 +376,13 @@ const TrackingWidget = () => {
                                         </div>
                                         <div className="col-md-6">
                                             <small className="text-muted d-block">Assigned Partner:</small>
-                                            <strong className="text-dark">
-                                                {delivery.delivery_person_name || 'Awaiting central dispatch'}
-                                                {delivery.delivery_person_phone ? ` (${delivery.delivery_person_phone})` : ''}
+                                            <strong className="text-dark d-flex align-items-center gap-1 flex-wrap">
+                                                <span>{delivery.delivery_person_name || 'Awaiting central dispatch'}</span>
+                                                {delivery.delivery_person_phone && (
+                                                    <span className="text-muted fw-normal">
+                                                        (<SensitiveValue value={delivery.delivery_person_phone} kind="phone" label="partner phone" />)
+                                                    </span>
+                                                )}
                                             </strong>
                                         </div>
                                         <div className="col-md-6">

@@ -130,21 +130,24 @@ const AdminDashboard = () => {
         navigate('/');
     };
 
-    const content = {
-        'overview':         <OverviewTab onNavigate={goToTab} />,
-        'deliveries':       <DeliveriesTab />,
-        'live-tracking':    <LiveTrackingTab />,
-        'exceptions':       <ExceptionsAlertsTab />,
-        'approvals':        <ApprovalsTab />,
-        'document-review':  <DocumentReviewTab />,
-        'fleet':            <FleetTab />,
-        'users':            <UsersTab />,
-        'client-kyc':       <ClientKycTab />,
-        'finance-overview': <FinanceOverviewTab onNavigate={goToTab} />,
-        'rates':            <RateCardsTab />,
-        'business':         <BusinessAccountsTab />,
-        'reports':          <ReportsTab />,
-        'audit':            <AuditTab />,
+    const renderTabContent = (tab) => {
+        switch (tab) {
+            case 'overview':         return <OverviewTab onNavigate={goToTab} />;
+            case 'deliveries':       return <DeliveriesTab />;
+            case 'live-tracking':    return <LiveTrackingTab />;
+            case 'exceptions':       return <ExceptionsAlertsTab />;
+            case 'approvals':        return <ApprovalsTab />;
+            case 'document-review':  return <DocumentReviewTab />;
+            case 'fleet':            return <FleetTab />;
+            case 'users':            return <UsersTab />;
+            case 'client-kyc':       return <ClientKycTab />;
+            case 'finance-overview': return <FinanceOverviewTab onNavigate={goToTab} />;
+            case 'rates':            return <RateCardsTab />;
+            case 'business':         return <BusinessAccountsTab />;
+            case 'reports':          return <ReportsTab />;
+            case 'audit':            return <AuditTab />;
+            default:                 return <OverviewTab onNavigate={goToTab} />;
+        }
     };
 
     // Close mobile nav on Escape key
@@ -420,7 +423,7 @@ const AdminDashboard = () => {
                             fallbackTitle="Operations Panel Unavailable"
                             fallbackMessage="An unexpected error occurred while rendering this operations tab. The navigation drawer and other tabs remain responsive."
                         >
-                            {content[activeTab]}
+                            {renderTabContent(activeTab)}
                         </ErrorBoundary>
                     </main>
                 </div>

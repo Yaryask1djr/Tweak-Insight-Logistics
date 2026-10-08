@@ -3,6 +3,7 @@ import { apiClient } from '../../api/client';
 import LiveLocationMap from '../common/LiveLocationMap';
 import { showToast } from '../common/Toast';
 import Icon from '../common/Icon';
+import SensitiveValue from '../common/SensitiveValue';
 
 const ClientTrackingTab = ({
     deliveries = [],
@@ -153,6 +154,16 @@ const ClientTrackingTab = ({
     const eta = getEstimatedArrival(selectedDelivery);
     const trackingRef = selectedDelivery ? (selectedDelivery.tracking_number || `#${selectedDelivery.id}`) : '';
 
+    // Detect stale GPS signal: flag if last_location_at is older than 5 minutes during an active dispatch
+    const isActiveDispatch = selectedDelivery && ['assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived'].includes(selectedDelivery.status);
+    const gpsLastAt = liveLocation?.last_location_at || liveLocation?.updated_at || null;
+    const isGpsStale = isActiveDispatch && gpsLastAt
+        ? (Date.now() - new Date(gpsLastAt).getTime()) > 5 * 60 * 1000
+        : false;
+    const gpsStaleLabel = gpsLastAt
+        ? `Last signal: ${new Date(gpsLastAt).toLocaleTimeString()}`
+        : 'No GPS signal received yet';
+
     return (
         <div className="client-tracking-tab">
             {/* Top Bar: Search & Select Shipment */}
@@ -277,10 +288,26 @@ const ClientTrackingTab = ({
                                     <h6 className="fw-bold text-dark mb-0">Live GPS Dispatch Map</h6>
                                     <small className="text-muted">Interactive OpenStreetMap view of courier & Kano route</small>
                                 </div>
-                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
-                                    🟢 Auto-updating
-                                </span>
+                                {isGpsStale ? (
+                                    <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                        ⚠️ Signal reconnecting
+                                    </span>
+                                ) : (
+                                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                        🟢 Auto-updating
+                                    </span>
+                                )}
                             </div>
+
+                            {isGpsStale && (
+                                <div className="alert alert-warning py-2 d-flex align-items-center gap-2 mb-3" role="status">
+                                    <span>📡</span>
+                                    <div>
+                                        <strong>GPS signal inactive</strong> — courier may be in a low-connectivity area.{' '}
+                                        <small className="text-muted">{gpsStaleLabel}</small>
+                                    </div>
+                                </div>
+                            )}
 
                             <div style={{ height: '340px', borderRadius: '10px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
                                 <LiveLocationMap
@@ -428,12 +455,17 @@ const ClientTrackingTab = ({
                                         </div>
                                     </div>
                                     {selectedDelivery.driver_phone && (
-                                        <a
-                                            href={`tel:${selectedDelivery.driver_phone}`}
-                                            className="btn btn-sm btn-outline-primary w-100 fw-semibold"
-                                        >
-                                            📞 Call Rider ({selectedDelivery.driver_phone})
-                                        </a>
+                                        <div className="d-flex flex-column gap-1">
+                                            <a
+                                                href={`tel:${selectedDelivery.driver_phone}`}
+                                                className="btn btn-sm btn-outline-primary w-100 fw-semibold"
+                                            >
+                                                📞 Call Rider
+                                            </a>
+                                            <div className="text-center small text-muted">
+                                                <SensitiveValue value={selectedDelivery.driver_phone} kind="phone" label="rider phone" />
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                             ) : (

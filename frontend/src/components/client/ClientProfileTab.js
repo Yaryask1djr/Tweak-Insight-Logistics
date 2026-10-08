@@ -1,5 +1,6 @@
 import React from 'react';
 import VerifiedBadge from '../common/VerifiedBadge';
+import SensitiveValue from '../common/SensitiveValue';
 
 const ClientProfileTab = ({ user, kyc, onOpenKyc }) => {
     return (
@@ -23,11 +24,11 @@ const ClientProfileTab = ({ user, kyc, onOpenKyc }) => {
                         </div>
                         <div className="mb-2">
                             <small className="text-muted d-block">Email Address</small>
-                            <span>{user?.email || 'N/A'}</span>
+                            <span className="d-inline-flex align-items-center"><SensitiveValue value={user?.email} kind="email" label="email address" /></span>
                         </div>
                         <div className="mb-2">
                             <small className="text-muted d-block">Phone Number</small>
-                            <span>{user?.phone || 'N/A'}</span>
+                            <span className="d-inline-flex align-items-center"><SensitiveValue value={user?.phone} kind="phone" label="phone number" /></span>
                         </div>
                         <div className="mb-0">
                             <small className="text-muted d-block">Account Type</small>

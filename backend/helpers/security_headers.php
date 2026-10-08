@@ -23,6 +23,8 @@ class SecurityHeaders
         header('Referrer-Policy: strict-origin-when-cross-origin', true);
         header('Permissions-Policy: geolocation=(self), camera=(self), microphone=()', true);
         header('X-Permitted-Cross-Domain-Policies: none', true);
+        header('Cross-Origin-Opener-Policy: same-origin', true);
+        header('Cross-Origin-Resource-Policy: same-origin', true);
         header('Content-Security-Policy: ' . self::contentSecurityPolicy(), true);
     }
 

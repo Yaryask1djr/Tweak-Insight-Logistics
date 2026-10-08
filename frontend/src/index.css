@@ -4828,4 +4828,90 @@ textarea.form-control {
   color: #94a3b8 !important;
 }
 
+/* ==================================================
+   TASK 4.2: DARK MODE AUDIT, SKELETONS & EMPTY STATES
+   ================================================== */
 
+/* 1. Dark Mode Skeleton Shimmer Refinement */
+[data-theme='dark'] .skeleton-box {
+  background-color: #1e293b !important;
+}
+
+[data-theme='dark'] .skeleton-box::after {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0)
+  ) !important;
+}
+
+/* 2. Modern Bootstrap 5.3 Surface & Subtle Class Coverage in Dark Mode */
+[data-theme='dark'] .bg-body-tertiary {
+  background-color: #141e33 !important;
+  color: var(--text-heading) !important;
+}
+
+[data-theme='dark'] .bg-body-secondary-subtle {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+[data-theme='dark'] .text-info-emphasis {
+  color: #7dd3fc !important;
+}
+
+[data-theme='dark'] .text-warning-emphasis {
+  color: #fde047 !important;
+}
+
+[data-theme='dark'] .text-success-emphasis {
+  color: #86efac !important;
+}
+
+[data-theme='dark'] .text-danger-emphasis {
+  color: #fca5a5 !important;
+}
+
+[data-theme='dark'] .text-primary-emphasis {
+  color: #93c5fd !important;
+}
+
+/* 3. Dark Mode List Group Items (e.g. Action Tasklists) */
+[data-theme='dark'] .list-group-item {
+  background-color: var(--bg-card) !important;
+  color: var(--text-body) !important;
+  border-color: var(--border-divider) !important;
+}
+
+[data-theme='dark'] .list-group-item:hover {
+  background-color: var(--bg-surface-hover) !important;
+}
+
+/* 4. Dark Mode Dismiss Buttons & Progress Bars */
+[data-theme='dark'] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+[data-theme='dark'] .progress {
+  background-color: #1e293b !important;
+}
+
+/* 5. Refined Dark Mode Empty States */
+[data-theme='dark'] .empty-state {
+  background: rgba(17, 24, 39, 0.75) !important;
+  border-color: var(--border-card) !important;
+}
+
+[data-theme='dark'] .empty-state-icon {
+  background: rgba(201, 24, 43, 0.18) !important;
+  color: #fca5a5 !important;
+}
+
+[data-theme='dark'] .empty-state h5 {
+  color: var(--text-heading) !important;
+}
+
+[data-theme='dark'] .empty-state p {
+  color: var(--text-muted) !important;
+}

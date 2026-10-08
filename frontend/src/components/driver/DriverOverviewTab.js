@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../../api/client';
 import { showToast } from '../common/Toast';
@@ -73,6 +73,129 @@ const DriverOverviewTab = ({ onNavigate }) => {
 
     // Primary Active Delivery (the most urgent one)
     const primaryActiveDelivery = activeDeliveries[0] || null;
+
+    // ── SaaS Interactive Tasklist ─────────────────────────────────────────────
+    const [showTasklist, setShowTasklist] = useState(true);
+    const [dismissedRecs, setDismissedRecs]   = useState([]);
+
+    const tasks = [
+        {
+            id: 'kyc_docs',
+            icon: '🛡️',
+            title: 'Complete KYC Document Verification',
+            desc: 'Upload your driver\'s licence, vehicle papers, and government ID to unlock Kano dispatch availability and job acceptance.',
+            badge: isKycVerified ? 'Verified' : 'Action Required',
+            badgeClass: isKycVerified
+                ? 'bg-success-subtle text-success border border-success-subtle'
+                : 'bg-danger-subtle text-danger border border-danger-subtle',
+            isCompleted: isKycVerified,
+            action: () => onNavigate('kyc-documents'),
+            actionLabel: isKycVerified ? 'View Documents' : 'Upload Now →',
+        },
+        {
+            id: 'go_available',
+            icon: '⚡',
+            title: 'Set Dispatch Status to Available',
+            desc: 'Toggle your status to Available so the Kano dispatch algorithm can route job offers to you in real time.',
+            badge: currentStatus === 'available' ? 'Online' : 'Offline',
+            badgeClass: currentStatus === 'available'
+                ? 'bg-success-subtle text-success border border-success-subtle'
+                : 'bg-warning-subtle text-warning-emphasis border border-warning-subtle',
+            isCompleted: currentStatus === 'available',
+            action: () => availabilityMutation.mutate('available'),
+            actionLabel: currentStatus === 'available' ? 'You\'re Online ✓' : 'Go Available →',
+        },
+        {
+            id: 'accept_first_job',
+            icon: '📋',
+            title: 'Accept Your First Kano Delivery Job',
+            desc: 'Browse open delivery offers in your zone. Accept a job to begin your first verified dispatch trip and earn your first commission.',
+            badge: (earnings?.completed_trips || 0) > 0 ? 'Active' : 'Get Started',
+            badgeClass: (earnings?.completed_trips || 0) > 0
+                ? 'bg-success-subtle text-success border border-success-subtle'
+                : 'bg-primary-subtle text-primary border border-primary-subtle',
+            isCompleted: (earnings?.completed_trips || 0) > 0,
+            action: () => onNavigate('available'),
+            actionLabel: (earnings?.completed_trips || 0) > 0 ? 'View Jobs →' : 'Browse Jobs →',
+        },
+        {
+            id: 'complete_delivery',
+            icon: '✅',
+            title: 'Complete a Delivery & Collect OTP',
+            desc: 'Deliver a package and verify handover using the 4-digit OTP from the recipient. Your completion rate directly affects your dispatch priority score.',
+            badge: (earnings?.completed_trips || 0) > 0 ? `${earnings.completed_trips} Completed` : 'Pending',
+            badgeClass: (earnings?.completed_trips || 0) > 0
+                ? 'bg-success-subtle text-success border border-success-subtle'
+                : 'bg-secondary-subtle text-secondary border border-secondary-subtle',
+            isCompleted: (earnings?.completed_trips || 0) > 0,
+            action: () => onNavigate('completed'),
+            actionLabel: (earnings?.completed_trips || 0) > 0 ? 'View History →' : 'See Active Jobs →',
+        },
+        {
+            id: 'check_earnings',
+            icon: '💰',
+            title: 'Review Your Earnings & Performance Stats',
+            desc: 'Monitor daily and total commissions, acceptance rate, and trip analytics from your Earnings Hub.',
+            badge: (earnings?.total_earned || 0) > 0 ? 'Earning' : 'Finance',
+            badgeClass: (earnings?.total_earned || 0) > 0
+                ? 'bg-success-subtle text-success border border-success-subtle'
+                : 'bg-info-subtle text-info border border-info-subtle',
+            isCompleted: (earnings?.total_earned || 0) > 0,
+            action: () => onNavigate('earnings'),
+            actionLabel: 'Open Earnings Hub →',
+        },
+    ];
+
+    const completedTasksCount  = tasks.filter(t => t.isCompleted).length;
+    const taskProgressPercent  = Math.round((completedTasksCount / tasks.length) * 100);
+
+    // ── AI-style Operational Recommendations ─────────────────────────────────
+    const recommendations = [
+        {
+            id: 'peak_hours',
+            tag: 'EARNINGS OPTIMISER',
+            tagBadgeClass: 'bg-primary-subtle text-primary border border-primary-subtle',
+            icon: '⚡',
+            metric: '+40% earnings potential',
+            title: 'Maximise Income During Peak Windows',
+            text: 'Kano dispatch demand spikes between 8:00–10:00 AM (morning market opens) and 4:00–7:00 PM (office close and evening markets). Going Available during these windows significantly increases your job assignment rate.',
+            cta: 'Go Available Now →',
+            action: () => availabilityMutation.mutate('available'),
+        },
+        {
+            id: 'route_corridors',
+            tag: 'ROUTE INTELLIGENCE',
+            tagBadgeClass: 'bg-success-subtle text-success border border-success-subtle',
+            icon: '🗺️',
+            metric: 'High-density zones',
+            title: 'Position in High-Demand Kano Corridors',
+            text: 'The highest delivery density corridors are Sabon Gari Market, Kantin Kwari, Challawa Industrial, and BUK/Bayero University zone. Positioning near these hubs reduces your pickup transit time and improves accept rates.',
+            cta: 'Browse Available Jobs →',
+            action: () => onNavigate('available'),
+        },
+        {
+            id: 'acceptance_rate',
+            tag: 'PERFORMANCE',
+            tagBadgeClass: 'bg-warning-subtle text-warning-emphasis border border-warning-subtle',
+            icon: '📈',
+            metric: 'Priority dispatch ranking',
+            title: 'Maintain a High Acceptance Rate',
+            text: 'Drivers with >85% acceptance rate receive first-priority in the Kano dispatch algorithm. Declining or ignoring offers reduces your priority rank and can trigger temporary dispatch freezes.',
+            cta: 'View Performance Stats →',
+            action: () => onNavigate('performance'),
+        },
+        {
+            id: 'fragile_premium',
+            tag: 'PREMIUM EARNINGS',
+            tagBadgeClass: 'bg-info-subtle text-info-emphasis border border-info-subtle',
+            icon: '💎',
+            metric: '20–35% higher fares',
+            title: 'Accept Fragile & Priority Orders',
+            text: 'Fragile-flagged and priority-tier deliveries carry 20–35% premium over standard fares. These require extra care during transit but represent some of the highest per-trip earnings available in Kano.',
+            cta: 'Browse Premium Jobs →',
+            action: () => onNavigate('available'),
+        },
+    ].filter(r => !dismissedRecs.includes(r.id));
 
     // Calculate ETA display for active delivery
     const calculateEta = (delivery) => {
@@ -312,6 +435,163 @@ const DriverOverviewTab = ({ onNavigate }) => {
                     </div>
                 </div>
             </div>
+
+            {/* ── SaaS Operational & Setup Tasklist ──────────────────────── */}
+            <div className="card border-0 shadow-sm custom-card mb-4 overflow-hidden">
+                <div className="p-4 border-bottom bg-body-tertiary d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <div className="d-flex align-items-center gap-2 mb-1">
+                            <span className="fs-5">📋</span>
+                            <h5 className="fw-bold mb-0 text-dark">Driver Action Items & Setup Checklist</h5>
+                            <span className={`badge ${taskProgressPercent === 100 ? 'bg-success' : 'bg-primary'} px-2 py-1`}>
+                                {completedTasksCount} of {tasks.length} Completed ({taskProgressPercent}%)
+                            </span>
+                        </div>
+                        <p className="text-muted small mb-0">
+                            Key onboarding steps and operational milestones to maximise your Kano dispatch earnings.
+                        </p>
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                        <div className="progress flex-grow-1" style={{ width: '130px', height: '8px' }}>
+                            <div
+                                className={`progress-bar ${taskProgressPercent === 100 ? 'bg-success' : 'bg-primary'} progress-bar-striped progress-bar-animated`}
+                                role="progressbar"
+                                style={{ width: `${taskProgressPercent}%` }}
+                                aria-valuenow={taskProgressPercent}
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-secondary py-1 px-2"
+                            onClick={() => setShowTasklist(prev => !prev)}
+                            style={{ fontSize: '0.8rem' }}
+                        >
+                            {showTasklist ? '▲ Hide' : '▼ Show'}
+                        </button>
+                    </div>
+                </div>
+
+                {showTasklist && (
+                    <div className="list-group list-group-flush">
+                        {tasks.map((task) => (
+                            <div
+                                key={task.id}
+                                className={`list-group-item p-3 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 ${task.isCompleted ? 'bg-body-secondary-subtle' : ''}`}
+                                style={{ transition: 'background-color 0.2s' }}
+                            >
+                                <div className="d-flex align-items-start gap-3">
+                                    <div
+                                        className={`rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1 ${task.isCompleted ? 'bg-success text-white' : 'border border-2 border-secondary-subtle text-muted'}`}
+                                        style={{ width: '28px', height: '28px', fontSize: '0.82rem', fontWeight: 'bold' }}
+                                    >
+                                        {task.isCompleted ? '✓' : ''}
+                                    </div>
+                                    <div>
+                                        <div className="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <span className={`fw-bold text-dark ${task.isCompleted ? 'text-decoration-line-through opacity-75' : ''}`}>
+                                                {task.icon} {task.title}
+                                            </span>
+                                            <span className={`badge ${task.badgeClass}`} style={{ fontSize: '0.72rem' }}>
+                                                {task.badge}
+                                            </span>
+                                        </div>
+                                        <p className="text-muted small mb-0" style={{ maxWidth: '580px', lineHeight: '1.45' }}>
+                                            {task.desc}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="d-flex align-items-center gap-2 flex-shrink-0 align-self-sm-center">
+                                    {task.action && (
+                                        <button
+                                            type="button"
+                                            className={`btn btn-sm ${task.isCompleted ? 'btn-outline-secondary' : 'btn-primary'} fw-semibold px-3`}
+                                            onClick={task.action}
+                                            style={{ fontSize: '0.82rem' }}
+                                        >
+                                            {task.actionLabel}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* ── AI Smart Driver Recommendations ────────────────────────── */}
+            {recommendations.length > 0 && (
+                <div className="mb-4">
+                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+                        <div>
+                            <div className="d-flex align-items-center gap-2">
+                                <span className="fs-5">💡</span>
+                                <h5 className="fw-bold mb-0 text-dark">Smart Dispatch Recommendations</h5>
+                                <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1" style={{ fontSize: '0.72rem' }}>
+                                    Dispatch AI
+                                </span>
+                            </div>
+                            <p className="text-muted small mb-0">
+                                Personalised tips to optimise your Kano earnings and dispatch priority ranking.
+                            </p>
+                        </div>
+                        {dismissedRecs.length > 0 && (
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-link text-decoration-none text-muted p-0"
+                                onClick={() => setDismissedRecs([])}
+                                style={{ fontSize: '0.8rem' }}
+                            >
+                                ↺ Reset Dismissed Tips
+                            </button>
+                        )}
+                    </div>
+                    <div className="row g-3">
+                        {recommendations.map((rec) => (
+                            <div key={rec.id} className="col-md-6">
+                                <div className="card border-0 shadow-sm custom-card p-3 h-100 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <div className="d-flex justify-content-between align-items-start mb-2">
+                                            <span className={`badge ${rec.tagBadgeClass}`} style={{ fontSize: '0.72rem', letterSpacing: '0.3px' }}>
+                                                {rec.icon} {rec.tag}
+                                            </span>
+                                            <div className="d-flex align-items-center gap-2">
+                                                <span className="badge rounded-pill bg-light text-dark border px-2 py-1" style={{ fontSize: '0.72rem' }}>
+                                                    {rec.metric}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    className="btn-close btn-close-sm"
+                                                    aria-label="Dismiss recommendation"
+                                                    title="Dismiss this tip"
+                                                    onClick={() => setDismissedRecs(prev => [...prev, rec.id])}
+                                                    style={{ fontSize: '0.65rem' }}
+                                                />
+                                            </div>
+                                        </div>
+                                        <h6 className="fw-bold text-dark mb-1" style={{ fontSize: '0.98rem' }}>{rec.title}</h6>
+                                        <p className="text-muted small mb-3" style={{ lineHeight: '1.45', fontSize: '0.83rem' }}>
+                                            {rec.text}
+                                        </p>
+                                    </div>
+                                    <div className="pt-2 border-top d-flex justify-content-between align-items-center">
+                                        <button
+                                            type="button"
+                                            className="btn btn-link text-decoration-none p-0 fw-semibold text-primary"
+                                            onClick={rec.action}
+                                            style={{ fontSize: '0.83rem' }}
+                                        >
+                                            {rec.cta}
+                                        </button>
+                                        <span className="text-muted small" style={{ fontSize: '0.75rem' }}>Kano Metropolis</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* ── Main Priority Section: Current Active Delivery ─────────── */}
             <div className="card border-0 shadow-sm custom-card p-4 mb-4 driver-active-hero-card">

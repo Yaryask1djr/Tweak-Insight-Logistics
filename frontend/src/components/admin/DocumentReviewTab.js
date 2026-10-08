@@ -6,6 +6,7 @@ import { showToast } from '../common/Toast';
 import { TableSkeleton } from '../common/SkeletonLoader';
 import Icon from '../common/Icon';
 import QueryState from '../common/QueryState';
+import SensitiveValue from '../common/SensitiveValue';
 
 const REJECTION_PRESETS = [
     { label: 'Blurry / Unreadable', text: 'The submitted document image is blurry or unreadable. Please upload a clear, high-resolution photo.' },
@@ -194,7 +195,9 @@ const DocumentReviewTab = () => {
                                     <tr key={doc.id}>
                                         <td>
                                             <strong className="d-block text-dark">{doc.full_name}</strong>
-                                            <span className="small text-muted">{doc.phone || doc.email}</span>
+                                            <span className="small text-muted">
+                                                <SensitiveValue value={doc.phone || doc.email} kind={doc.phone ? 'phone' : 'email'} label="driver contact" />
+                                            </span>
                                             {doc.vehicle_type && (
                                                 <span className="badge bg-secondary bg-opacity-10 text-secondary ms-1 small">
                                                     {doc.vehicle_type}
@@ -397,12 +400,16 @@ const DocumentReviewTab = () => {
 
                                         <div className="mb-3">
                                             <label className="text-muted small d-block">Phone Number</label>
-                                            <span className="text-dark fw-semibold">{viewerDoc.phone || '—'}</span>
+                                            <span className="text-dark fw-semibold">
+                                                {viewerDoc.phone ? <SensitiveValue value={viewerDoc.phone} kind="phone" label="driver phone" /> : '—'}
+                                            </span>
                                         </div>
 
                                         <div className="mb-3">
                                             <label className="text-muted small d-block">Email Address</label>
-                                            <span className="text-dark small">{viewerDoc.email}</span>
+                                            <span className="text-dark small">
+                                                {viewerDoc.email ? <SensitiveValue value={viewerDoc.email} kind="email" label="driver email" /> : '—'}
+                                            </span>
                                         </div>
 
                                         <div className="row g-2 mb-3">

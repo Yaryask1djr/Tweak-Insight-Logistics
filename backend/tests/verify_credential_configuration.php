@@ -21,4 +21,17 @@ assert(
     'A dedicated account with a 32-byte password should be accepted.'
 );
 
+// Environment Hardening Tests
+putenv('APP_ENV=production');
+putenv('APP_DEBUG=true');
+assert(SecurityConfig::productionEnvironmentError() !== null, 'APP_DEBUG=true in production must trigger an error.');
+
+putenv('APP_DEBUG=false');
+assert(SecurityConfig::productionEnvironmentError() === null, 'APP_DEBUG=false in production should be valid.');
+
+// Reset to development for local suite
+putenv('APP_ENV=development');
+putenv('APP_DEBUG=true');
+assert(SecurityConfig::productionEnvironmentError() === null, 'APP_DEBUG=true in development is permitted.');
+
 echo "Credential configuration verification passed.\n";

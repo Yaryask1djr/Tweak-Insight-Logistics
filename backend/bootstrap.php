@@ -49,6 +49,7 @@ $configuredDbPassword = (string)getenv('DB_PASS');
 $configurationErrors = array_filter([
     SecurityConfig::jwtSecretError($configuredJwt),
     SecurityConfig::databaseCredentialsError($configuredDbUser, $configuredDbPassword, $isProductionEnv),
+    SecurityConfig::productionEnvironmentError(),
 ]);
 
 if ($configurationErrors !== []) {

@@ -9,28 +9,62 @@ final class NotificationController
     public static function list(PDO $db, int $userId): void
     {
         self::ensureAvailable($db);
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $limit = max(1, min(100, (int)($_GET['limit'] ?? 20)));
-        $offset = ($page - 1) * $limit;
+        $limit      = max(1, min(100, (int)($_GET['limit'] ?? 20)));
         $unreadOnly = filter_var($_GET['unread'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $where = 'WHERE user_id = :user_id';
-        if ($unreadOnly) {
-            $where .= " AND delivery_status != 'read'";
+        $cursor     = isset($_GET['cursor']) ? (int)$_GET['cursor'] : null;
+
+        $unreadFilter = $unreadOnly ? " AND delivery_status != 'read'" : '';
+
+        // ── Keyset cursor path ────────────────────────────────────────────────
+        if ($cursor !== null) {
+            $sql = "SELECT id, delivery_id, channel, notification_type, title, body,
+                           payload, delivery_status, sent_at, read_at, created_at
+                    FROM notifications
+                    WHERE user_id = :user_id{$unreadFilter}
+                      AND id < :cursor
+                    ORDER BY id DESC
+                    LIMIT :limit";
+            $stmt = $db->prepare($sql);
+            $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+            $stmt->bindValue(':cursor',  $cursor,  PDO::PARAM_INT);
+            $stmt->bindValue(':limit',   $limit + 1, PDO::PARAM_INT);
+            $stmt->execute();
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $hasMore    = count($items) > $limit;
+            if ($hasMore) { array_pop($items); }
+            $nextCursor = $hasMore ? (int)end($items)['id'] : null;
+
+            foreach ($items as &$item) {
+                $item['payload'] = $item['payload'] ? json_decode((string)$item['payload'], true) : null;
+            }
+            Response::json([
+                'notifications' => $items,
+                'next_cursor'   => $nextCursor,
+                'has_more'      => $hasMore,
+            ], 'Notifications retrieved.');
+            return;
         }
+
+        // ── Offset fallback (backward compatibility) ──────────────────────────
+        $page   = max(1, (int)($_GET['page'] ?? 1));
+        $offset = ($page - 1) * $limit;
+        $where  = "WHERE user_id = :user_id{$unreadFilter}";
 
         $count = $db->prepare("SELECT COUNT(*) FROM notifications {$where}");
         $count->execute(['user_id' => $userId]);
         $total = (int)$count->fetchColumn();
 
         $statement = $db->prepare(
-            "SELECT id, delivery_id, channel, notification_type, title, body, payload, delivery_status, sent_at, read_at, created_at
+            "SELECT id, delivery_id, channel, notification_type, title, body,
+                    payload, delivery_status, sent_at, read_at, created_at
              FROM notifications {$where}
              ORDER BY created_at DESC, id DESC
              LIMIT :limit OFFSET :offset"
         );
         $statement->bindValue(':user_id', $userId, PDO::PARAM_INT);
-        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $statement->bindValue(':limit',   $limit,  PDO::PARAM_INT);
+        $statement->bindValue(':offset',  $offset, PDO::PARAM_INT);
         $statement->execute();
         $items = $statement->fetchAll(PDO::FETCH_ASSOC);
         foreach ($items as &$item) {

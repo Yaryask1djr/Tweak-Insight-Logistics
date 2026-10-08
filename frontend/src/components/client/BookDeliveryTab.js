@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../api/client';
 import { showToast } from '../common/Toast';
 import { useAuth } from '../AuthContext';
+import SensitiveValue from '../common/SensitiveValue';
 
 const OUT_OF_AREA_REGEX = /\b(abuja|lagos|ibadan|kaduna|port harcourt|enugu|benin|ilorin|jos|maiduguri|sokoto|zaria|calabar|owerri|warri|asaba|aba)\b/i;
 
@@ -55,6 +56,8 @@ const BookDeliveryTab = ({ onCreated }) => {
         return !OUT_OF_AREA_REGEX.test(trimmed);
     };
 
+    const DRAFT_STORAGE_KEY = 'til_booking_draft';
+
     const [step, setStep] = useState(1);
     const [selectedSize, setSelectedSize] = useState('small_package');
     const [form, setForm] = useState({
@@ -82,6 +85,74 @@ const BookDeliveryTab = ({ onCreated }) => {
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [createdTrackingNumber, setCreatedTrackingNumber] = useState('');
+    const [draftRestored, setDraftRestored] = useState(false);
+
+    // Restore draft from sessionStorage on mount
+    useEffect(() => {
+        try {
+            const rawDraft = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+            if (rawDraft) {
+                const draft = JSON.parse(rawDraft);
+                if (draft && typeof draft === 'object' && draft.form) {
+                    setForm(prev => ({
+                        ...prev,
+                        ...draft.form,
+                        pickup_contact_name: draft.form.pickup_contact_name || user?.full_name || '',
+                        pickup_contact_phone: draft.form.pickup_contact_phone || user?.phone || '',
+                    }));
+                    if (draft.selectedSize) setSelectedSize(draft.selectedSize);
+                    if (draft.step && draft.step < 4) setStep(draft.step);
+                    if (draft.priceBreakdown) setPriceBreakdown(draft.priceBreakdown);
+                    setDraftRestored(true);
+                }
+            }
+        } catch (_) {}
+    }, [user?.full_name, user?.phone]);
+
+    // Save draft to sessionStorage on state changes
+    useEffect(() => {
+        if (step < 4) {
+            try {
+                sessionStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+                    form,
+                    step,
+                    selectedSize,
+                    priceBreakdown,
+                }));
+            } catch (_) {}
+        }
+    }, [form, step, selectedSize, priceBreakdown]);
+
+    const clearDraft = () => {
+        try {
+            sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+        } catch (_) {}
+        setStep(1);
+        setSelectedSize('small_package');
+        setPriceBreakdown(null);
+        setDraftRestored(false);
+        setForm({
+            pickup_address: '',
+            pickup_city: 'Kano',
+            pickup_contact_name: user?.full_name || '',
+            pickup_contact_phone: user?.phone || '',
+            pickup_lat: null,
+            pickup_lng: null,
+            delivery_address: '',
+            delivery_city: 'Kano',
+            delivery_contact_name: '',
+            delivery_contact_phone: '',
+            delivery_lat: null,
+            delivery_lng: null,
+            package_size: 'small_package',
+            item_description: 'Packaged parcel / items',
+            item_quantity: 1,
+            special_instructions: '',
+            is_fragile: false,
+            is_perishable: false,
+        });
+        showToast.info('Booking draft cleared.');
+    };
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -187,6 +258,10 @@ const BookDeliveryTab = ({ onCreated }) => {
             const succMsg = `🎉 Delivery request created! Reference ID #${trackingNum}`;
             setMessage(succMsg);
             showToast.success(succMsg);
+            try {
+                sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+            } catch (_) {}
+            setDraftRestored(false);
             setStep(4);
         } catch (err) {
             const errMsg = err.response?.data?.message || 'Failed to submit request';
@@ -212,11 +287,23 @@ const BookDeliveryTab = ({ onCreated }) => {
                     <h4 className="fw-bold mb-1">📦 Book a New Delivery</h4>
                     <p className="text-muted small mb-0">Fast, on-demand dispatch across Kano Metropolitan</p>
                 </div>
-                {step <= 3 && (
-                    <span className="badge bg-primary px-3 py-2 fs-6">
-                        Step {step} of 3
-                    </span>
-                )}
+                <div className="d-flex align-items-center gap-2">
+                    {draftRestored && step <= 3 && (
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-secondary py-1 px-2"
+                            onClick={clearDraft}
+                            title="Discard draft and start fresh"
+                        >
+                            ↺ Clear Draft
+                        </button>
+                    )}
+                    {step <= 3 && (
+                        <span className="badge bg-primary px-3 py-2 fs-6">
+                            Step {step} of 3
+                        </span>
+                    )}
+                </div>
             </div>
 
             {/* Visual 3-Step Progressive Stepper */}
@@ -255,6 +342,13 @@ const BookDeliveryTab = ({ onCreated }) => {
                             <small className="wizard-step-subtitle d-none d-sm-block">Review & dispatch</small>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {draftRestored && step <= 3 && (
+                <div className="alert alert-info py-2 d-flex align-items-center justify-content-between gap-2 mb-3">
+                    <span>📋 <strong>Draft restored</strong> — your previous booking details have been recovered.</span>
+                    <button type="button" className="btn-close btn-close-sm" onClick={() => setDraftRestored(false)} aria-label="Dismiss" />
                 </div>
             )}
 
@@ -321,7 +415,7 @@ const BookDeliveryTab = ({ onCreated }) => {
                                     <div>
                                         <span className="fw-semibold">{user?.full_name}</span>
                                         <span className="text-muted mx-1">·</span>
-                                        <span className="text-muted">{user?.phone}</span>
+                                        <span className="text-muted"><SensitiveValue value={user?.phone} kind="phone" label="account phone" /></span>
                                     </div>
                                     <span className="badge bg-secondary ms-auto" style={{ fontSize: '0.65rem' }}>Your account</span>
                                 </div>
@@ -596,13 +690,13 @@ const BookDeliveryTab = ({ onCreated }) => {
                                 <div className="mb-3">
                                     <small className="text-muted d-block">📍 Pickup Origin</small>
                                     <strong className="d-block text-dark">{form.pickup_address}</strong>
-                                    <small className="text-muted">Sender: {form.pickup_contact_name} ({form.pickup_contact_phone})</small>
+                                    <small className="text-muted">Sender: {form.pickup_contact_name} {form.pickup_contact_phone ? <span>(<SensitiveValue value={form.pickup_contact_phone} kind="phone" label="sender phone" />)</span> : ''}</small>
                                 </div>
 
                                 <div className="mb-3">
                                     <small className="text-muted d-block">🏁 Destination</small>
                                     <strong className="d-block text-dark">{form.delivery_address}</strong>
-                                    <small className="text-muted">Recipient: {form.delivery_contact_name} ({form.delivery_contact_phone})</small>
+                                    <small className="text-muted">Recipient: {form.delivery_contact_name} {form.delivery_contact_phone ? <span>(<SensitiveValue value={form.delivery_contact_phone} kind="phone" label="recipient phone" />)</span> : ''}</small>
                                 </div>
 
                                 <hr className="my-2" />

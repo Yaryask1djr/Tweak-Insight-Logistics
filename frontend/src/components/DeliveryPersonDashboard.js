@@ -137,18 +137,21 @@ const DeliveryPersonDashboard = () => {
         setActiveTab(id);
     };
 
-    const content = {
-        'overview':        <DriverOverviewTab onNavigate={openTab} />,
-        'available':       <AvailableJobsTab />,
-        'active':          <ActiveDeliveriesTab />,
-        'completed':       <CompletedDeliveriesTab />,
-        'performance':     <DriverPerformanceTab />,
-        'earnings':        <EarningsTab />,
-        'notifications':   <DriverNotificationsTab />,
-        'partner-profile': <PartnerOperationsTab initialSection="profile-vehicle" />,
-        'profile-vehicle': <PartnerOperationsTab initialSection="profile-vehicle" />,
-        'kyc-documents':   <PartnerOperationsTab initialSection="kyc-documents" />,
-        'settings':        <PartnerOperationsTab initialSection="settings" />,
+    const renderTabContent = (tab) => {
+        switch (tab) {
+            case 'overview':        return <DriverOverviewTab onNavigate={openTab} />;
+            case 'available':       return <AvailableJobsTab />;
+            case 'active':          return <ActiveDeliveriesTab />;
+            case 'completed':       return <CompletedDeliveriesTab />;
+            case 'performance':     return <DriverPerformanceTab />;
+            case 'earnings':        return <EarningsTab />;
+            case 'notifications':   return <DriverNotificationsTab />;
+            case 'partner-profile':
+            case 'profile-vehicle': return <PartnerOperationsTab initialSection="profile-vehicle" />;
+            case 'kyc-documents':   return <PartnerOperationsTab initialSection="kyc-documents" />;
+            case 'settings':        return <PartnerOperationsTab initialSection="settings" />;
+            default:                return <DriverOverviewTab onNavigate={openTab} />;
+        }
     };
 
     return (
@@ -343,7 +346,7 @@ const DeliveryPersonDashboard = () => {
                             fallbackTitle="Driver Console Unavailable"
                             fallbackMessage="An unexpected error occurred while loading this tab. Your active job status and profile remain secure."
                         >
-                            {content[activeTab] || content['overview']}
+                            {renderTabContent(activeTab)}
                         </ErrorBoundary>
                     </main>
                 </div>

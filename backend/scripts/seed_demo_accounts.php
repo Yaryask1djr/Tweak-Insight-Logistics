@@ -14,6 +14,7 @@ $db = (new Database())->getConnection();
 $accounts = [
     ['admin', 'Musbahu Abdullahi Iliyasu', 'yaryaskidjr@gmail.com', '+2348060431696', 'Nassarawa, Kano'],
     ['client', 'Kano Client', 'client@tweaklogistics.test', '+2349123053153', 'Hotoro, Kano'],
+    ['client', 'Musbahu Iliyasu Abdullahi', 'yaryaskidjr1@gmail.com', '09033470309', 'Kano Metropolis'],
     ['delivery', 'Kano Driver', 'driver@tweaklogistics.test', '+2347043495744', 'Farawa, Kano'],
 ];
 
