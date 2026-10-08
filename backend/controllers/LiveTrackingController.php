@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/cache_helper.php';
 require_once __DIR__ . '/../helpers/monitoring.php';
+require_once __DIR__ . '/../helpers/cursor_pagination.php';
 
 /** Role-scoped live GPS read model. Exact coordinates are never public. */
 final class LiveTrackingController
@@ -93,11 +94,11 @@ final class LiveTrackingController
     public static function activeForAdmin(PDO $db): void
     {
         $limit = max(1, min(100, (int)($_GET['limit'] ?? 50)));
-        $cursor = isset($_GET['cursor']) ? (int)$_GET['cursor'] : null;
+        $cursor = CursorPagination::fromQuery($_GET);
 
         if ($cursor === null) {
             $cached = CacheHelper::getActiveAdminLocations();
-            if ($cached !== null) {
+            if ($cached !== null && ($cached['page_limit'] ?? null) === $limit) {
                 $cachedPage = isset($cached['items']) ? $cached : [
                     'items' => $cached,
                     'next_cursor' => null,
@@ -108,7 +109,7 @@ final class LiveTrackingController
             }
         }
 
-        $cursorClause = $cursor === null ? '' : ' AND d.id < :cursor';
+        $cursorClause = $cursor > 0 ? ' AND d.id < :cursor' : '';
         $query = $db->prepare(" 
             SELECT d.id, d.tracking_number, d.status, d.tracking_started_at, d.request_time,
                    u.full_name AS driver_name,
@@ -131,8 +132,8 @@ final class LiveTrackingController
             ORDER BY d.id DESC
             LIMIT :limit
         ");
-        if ($cursor !== null) $query->bindValue(':cursor', $cursor, PDO::PARAM_INT);
-        $query->bindValue(':limit', $limit, PDO::PARAM_INT);
+        if ($cursor > 0) $query->bindValue(':cursor', $cursor, PDO::PARAM_INT);
+        $query->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
         $queryStarted = microtime(true);
         $query->execute();
         $queryDurationMs = (microtime(true) - $queryStarted) * 1000;
@@ -146,13 +147,14 @@ final class LiveTrackingController
         $items = [];
         foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $delivery) $items[] = self::format($delivery);
 
-        $nextCursor = count($items) === $limit && !empty($items)
-            ? (int)end($items)['delivery_id']
-            : null;
+        $pageData = CursorPagination::page($items, $limit, 'delivery_id');
+        $items = $pageData['items'];
+        $nextCursor = $pageData['next_cursor'];
 
         if ($cursor === null) {
             // Cache only the first page; cursor pages must reflect their own position.
             CacheHelper::setActiveAdminLocations([
+                'page_limit' => $limit,
                 'items' => $items,
                 'next_cursor' => $nextCursor,
                 'has_more' => $nextCursor !== null,

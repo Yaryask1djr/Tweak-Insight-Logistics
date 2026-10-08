@@ -16,6 +16,7 @@ final class AuthorizationPolicy
             'account.read_self',
             'delivery.request.create',
             'delivery.request.read_own',
+            'payments.manage_own',
             'tracking.live.read_own',
             'notifications.read_own',
             'kyc.read_own',

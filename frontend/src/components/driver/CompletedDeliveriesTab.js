@@ -12,7 +12,7 @@ const CompletedDeliveriesTab = () => {
     const deliveries = useQuery({
         queryKey: ['driver', 'completed-deliveries', page, limit],
         queryFn: () =>
-            apiGet(`/delivery-person/my-assignments?status=delivered&page=${page}&limit=${limit}`),
+            apiGet(`/delivery-person/my-assignments?status=finished&page=${page}&limit=${limit}`),
     });
 
     const rows = deliveries.data?.data || [];
@@ -83,4 +83,3 @@ const CompletedDeliveriesTab = () => {
 };
 
 export default CompletedDeliveriesTab;
-

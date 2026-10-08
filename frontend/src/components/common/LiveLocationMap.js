@@ -3,15 +3,9 @@ import { Circle, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } fr
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './LiveLocationMap.css';
+import { toPoint } from '../../utils/coordinates';
 
 const DEFAULT_ZOOM = 14;
-
-const toPoint = (value) => {
-    if (!value) return null;
-    const latitude = Number(value.latitude ?? value.lat);
-    const longitude = Number(value.longitude ?? value.lng ?? value.lon);
-    return Number.isFinite(latitude) && Number.isFinite(longitude) ? [latitude, longitude] : null;
-};
 
 const pointIcon = (className, label) => L.divIcon({
     className: 'live-map-icon-wrapper',
@@ -54,12 +48,12 @@ const FollowLiveLocation = ({ position, route }) => {
  * route line is drawn without re-creating the map during GPS refreshes.
  */
 const LiveLocationMap = ({ location, pickup, destination, height = 260 }) => {
-    const driverPosition = toPoint(location);
-    const pickupPosition = toPoint(pickup ?? location?.pickup);
-    const destinationPosition = toPoint(destination ?? location?.destination);
+    const driverPosition = useMemo(() => toPoint(location), [location]);
+    const pickupPosition = useMemo(() => toPoint(pickup ?? location?.pickup), [pickup, location?.pickup]);
+    const destinationPosition = useMemo(() => toPoint(destination ?? location?.destination), [destination, location?.destination]);
     const route = useMemo(
         () => pickupPosition && destinationPosition ? [pickupPosition, destinationPosition] : [],
-        [pickupPosition?.[0], pickupPosition?.[1], destinationPosition?.[0], destinationPosition?.[1]]
+        [pickupPosition, destinationPosition]
     );
     const heading = Number(location?.heading_degrees ?? location?.heading);
     const bearing = Number.isFinite(heading) && heading >= 0 && heading <= 360 ? heading : 0;

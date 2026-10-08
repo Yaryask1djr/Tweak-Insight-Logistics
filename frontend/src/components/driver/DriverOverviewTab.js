@@ -2,7 +2,6 @@ import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../../api/client';
 import { showToast } from '../common/Toast';
-import { StatCardSkeleton } from '../common/SkeletonLoader';
 
 const DriverOverviewTab = ({ onNavigate }) => {
     const queryClient = useQueryClient();

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../../api/client';
 import Pagination from '../common/Pagination';
-import { showToast } from '../common/Toast';
+import ReportExportButton from '../common/ReportExportButton';
 import { TableSkeleton } from '../common/SkeletonLoader';
 import QueryState from '../common/QueryState';
 
@@ -30,28 +30,6 @@ const AuditTab = () => {
         queryFn: () => apiGet(`/admin/audit-log?${params}`),
     });
 
-    const exportCsv = async () => {
-        try {
-            const csvParams = new URLSearchParams({
-                format: 'csv',
-                ...Object.fromEntries(
-                    Object.entries(appliedFilters).filter(([, value]) => value !== '')
-                ),
-            });
-            const result = await apiGet(`/admin/audit-log?${csvParams}`, {
-                responseType: 'blob',
-            });
-            const url = URL.createObjectURL(result);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'operations-audit.csv';
-            link.click();
-            URL.revokeObjectURL(url);
-        } catch {
-            showToast.error('Could not export the operations audit log.');
-        }
-    };
-
     const entries = audit.data?.data || [];
 
     if (audit.isError && !audit.data) {
@@ -68,9 +46,7 @@ const AuditTab = () => {
                     </p>
                 </div>
                 <div className="d-flex gap-2">
-                    <button onClick={exportCsv} className="btn btn-sm btn-outline-secondary">
-                        Export CSV
-                    </button>
+                    <ReportExportButton kind="audit" filters={appliedFilters} />
                     <button onClick={() => audit.refetch()} className="btn btn-sm btn-outline-primary">
                         Refresh
                     </button>
@@ -182,4 +158,3 @@ const AuditTab = () => {
 };
 
 export default AuditTab;
-

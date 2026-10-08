@@ -1,25 +1,29 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteRule ^(?:index\.html)?$ index.php [L]
+    RewriteRule (^|/)\. - [F,L]
 
     # KYC files must never become public assets, even if a deployment creates
     # an accidental storage or upload directory under this document root.
     RewriteRule ^(?:storage|uploads|documents)(?:/|$) - [F,L,NC]
 
     # Route API traffic through the only PHP file in this document root.
-    RewriteRule ^(?:api(?:/|$)|auth(?:/|$)|admin(?:/|$)|client(?:/|$)|deliveries(?:/|$)|delivery(?:/|$)|delivery-person(?:/|$)|notifications(?:/|$)|health$) api.php [QSA,L,NC]
+    RewriteRule ^(?:api(?:/|$)|auth(?:/|$)|admin(?:/|$)|client(?:/|$)|deliveries(?:/|$)|delivery(?:/|$)|delivery-person(?:/|$)|notifications(?:/|$)|health(?:/|$)) api.php [QSA,L,NC]
 
     # Compiled React assets are safe to serve directly.
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
+    RewriteRule ^(?:static|releases)/ - [R=404,L]
 
     # React Router Single Page Application fallback.
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ index.html [QSA,L]
+    RewriteRule ^ index.php [QSA,L]
 </IfModule>
 
 Options -Indexes
+DirectoryIndex index.php
 
 <FilesMatch "^\.">
     <IfModule mod_authz_core.c>

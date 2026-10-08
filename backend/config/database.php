@@ -59,20 +59,11 @@ class Database
             ];
 
             $this->conn = new PDO($dsn, $this->username, $this->password, $options);
+            $this->conn->exec("SET time_zone = '+00:00'");
             return $this->conn;
         } catch (PDOException $e) {
             Logger::exception($e, 'Database connection failed');
-            
-            if (!headers_sent()) {
-                http_response_code(500);
-                header('Content-Type: application/json; charset=UTF-8');
-            }
-            echo json_encode([
-                'status' => 'error',
-                'code' => 500,
-                'message' => 'Database service temporarily unavailable. Please try again later.'
-            ], JSON_UNESCAPED_SLASHES);
-            exit(1);
+            throw new RuntimeException('Database service temporarily unavailable.', 0, $e);
         }
     }
 }

@@ -1,0 +1,24 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> frontend@1.0.0 test
+> react-scripts test --watchAll=false --runInBand
+
+PASS src/components/common/NotificationInbox.test.js
+PASS src/components/driver/ActiveDeliveriesTab.test.js
+PASS src/components/admin/ExceptionsAlertsTab.test.js
+PASS src/components/admin/DeliveriesTab.test.js
+PASS src/api/client.test.js
+PASS src/components/common/PaymentReviewPanel.test.js
+PASS src/App.test.js
+PASS src/utils/bookingRequest.test.js
+PASS src/utils/coordinates.test.js
+PASS src/utils/payments.test.js
+PASS src/components/PaymentReturn.test.js
+PASS src/utils/safeReturnPath.test.js
+PASS src/api/response.test.js
+
+Test Suites: 13 passed, 13 total
+Tests:       59 passed, 59 total
+Snapshots:   0 total
+Time:        2.723 s, estimated 3 s
+Ran all test suites.

@@ -1,7 +1,11 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PaymentReturn from './components/PaymentReturn';
+import ToastNotification from './components/common/Toast';
+import ErrorBoundary from './components/common/ErrorBoundary';
+import './App.css';
 
 // Modular Landing Page Components (Eagerly loaded for optimal First Contentful Paint)
 import Navbar from './components/landing/Navbar';
@@ -27,10 +31,6 @@ const AboutPage = React.lazy(() => import('./components/AboutPage'));
 const CareersPage = React.lazy(() => import('./components/CareersPage'));
 const ContactPage = React.lazy(() => import('./components/ContactPage'));
 const TrackPage = React.lazy(() => import('./components/TrackPage'));
-
-import ToastNotification from './components/common/Toast';
-import ErrorBoundary from './components/common/ErrorBoundary';
-import './App.css';
 
 // Sleek branded loading fallback for route transitions
 const PageLoader = () => (
@@ -102,6 +102,7 @@ function App() {
                             <Route path="/coverage" element={<CoveragePage />} />
                             <Route path="/terms" element={<TermsAndConditions />} />
                             <Route path="/login" element={<Login />} />
+                            <Route path="/payment/return" element={<PaymentReturn />} />
                             <Route path="/register-client" element={<RegisterClient />} />
                             <Route path="/register-delivery" element={<RegisterDelivery />} />
 

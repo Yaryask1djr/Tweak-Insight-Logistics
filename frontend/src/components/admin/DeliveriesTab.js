@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '../../api/client';
 import Pagination from '../common/Pagination';
@@ -7,6 +7,7 @@ import { showToast } from '../common/Toast';
 import { TableSkeleton } from '../common/SkeletonLoader';
 import QueryState from '../common/QueryState';
 import SensitiveValue from '../common/SensitiveValue';
+import PaymentReviewPanel from '../common/PaymentReviewPanel';
 
 const DELIVERY_FILTER_STORAGE_KEY = 'til-admin-delivery-filters';
 const DEFAULT_FILTERS = { status: 'all', limit: 15 };
@@ -42,7 +43,9 @@ const readSavedFilters = () => {
 };
 
 const DeliveriesTab = () => {
+    const [paymentDeliveryId, setPaymentDeliveryId] = useState(null);
     const [savedFilters] = useState(readSavedFilters);
+    const cursorRequest = useRef(null);
     const [paginationMode, setPaginationMode] = useState('cursor');
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(savedFilters.limit);
@@ -60,10 +63,14 @@ const DeliveriesTab = () => {
     const [releaseReason, setReleaseReason] = useState('');
     const queryClient = useQueryClient();
 
-    const fetchInitialCursor = async () => {
+    const fetchInitialCursor = useCallback(async () => {
+        cursorRequest.current?.abort();
+        const request = new AbortController();
+        cursorRequest.current = request;
         setIsLoadingCursor(true);
         try {
-            const res = await apiGet(`/admin/all-deliveries?status=${status}&limit=${limit}&cursor=`);
+            const res = await apiGet(`/admin/all-deliveries?status=${status}&limit=${limit}&search=${encodeURIComponent(searchTerm)}&cursor=`, { signal: request.signal });
+            if (request.signal.aborted) return;
             const items = res.data?.deliveries || res.data?.data || [];
             setCursorItems(items);
             setNextCursor(res.data?.next_cursor ?? null);
@@ -71,15 +78,17 @@ const DeliveriesTab = () => {
         } catch (err) {
             console.error('Failed to fetch cursor deliveries', err);
         } finally {
-            setIsLoadingCursor(false);
+            if (!request.signal.aborted) setIsLoadingCursor(false);
         }
-    };
+    }, [status, limit, searchTerm]);
 
     const loadMoreCursor = async () => {
         if (!nextCursor || isLoadingMore) return;
+        const request = cursorRequest.current;
         setIsLoadingMore(true);
         try {
-            const res = await apiGet(`/admin/all-deliveries?status=${status}&limit=${limit}&cursor=${nextCursor}`);
+            const res = await apiGet(`/admin/all-deliveries?status=${status}&limit=${limit}&search=${encodeURIComponent(searchTerm)}&cursor=${nextCursor}`, { signal: request?.signal });
+            if (request?.signal.aborted || cursorRequest.current !== request) return;
             const newItems = res.data?.deliveries || res.data?.data || [];
             setCursorItems(prev => [...prev, ...newItems]);
             setNextCursor(res.data?.next_cursor ?? null);
@@ -95,7 +104,8 @@ const DeliveriesTab = () => {
         if (paginationMode === 'cursor') {
             fetchInitialCursor();
         }
-    }, [paginationMode, status, limit]);
+        return () => cursorRequest.current?.abort();
+    }, [paginationMode, fetchInitialCursor]);
 
     useEffect(() => {
         try {
@@ -117,9 +127,9 @@ const DeliveriesTab = () => {
     };
 
     const deliveries = useQuery({
-        queryKey: ['admin', 'deliveries', page, limit, status],
-        queryFn: () =>
-            apiGet(`/admin/all-deliveries?page=${page}&limit=${limit}&status=${status}`),
+        queryKey: ['admin', 'deliveries', page, limit, status, searchTerm, sortBy],
+        queryFn: ({ signal }) =>
+            apiGet(`/admin/all-deliveries?${new URLSearchParams({ page, limit, status, search: searchTerm, sort: sortBy })}`, { signal }),
         enabled: paginationMode === 'paged',
     });
 
@@ -192,31 +202,16 @@ const DeliveriesTab = () => {
 
     const baseRows = paginationMode === 'cursor' ? cursorItems : (deliveries.data?.data || []);
 
-    const filteredRows = baseRows.filter(item => {
-        if (!searchTerm.trim()) return true;
-        const q = searchTerm.toLowerCase();
-        return (
-            String(item.id).includes(q) ||
-            String(item.tracking_number || '').toLowerCase().includes(q) ||
-            String(item.client_name || '').toLowerCase().includes(q) ||
-            String(item.client_phone || '').includes(q) ||
-            String(item.delivery_person_name || '').toLowerCase().includes(q) ||
-            String(item.pickup_address || '').toLowerCase().includes(q) ||
-            String(item.delivery_address || '').toLowerCase().includes(q) ||
-            String(item.item_description || '').toLowerCase().includes(q)
-        );
-    });
-
-    const rows = [...filteredRows].sort((a, b) => {
-        if (sortBy === 'oldest') return a.id - b.id;
-        if (sortBy === 'cost_desc') return Number(b.total_cost || 0) - Number(a.total_cost || 0);
-        if (sortBy === 'cost_asc') return Number(a.total_cost || 0) - Number(b.total_cost || 0);
-        if (sortBy === 'status') return String(a.status).localeCompare(String(b.status));
-        return b.id - a.id;
-    });
+    const rows = baseRows;
     const isTableLoading = paginationMode === 'cursor' ? (isLoadingCursor && cursorItems.length === 0) : deliveries.isLoading;
     const isBusy = id =>
         operation.isPending && operation.variables?.body?.delivery_id === id;
+
+    const options = (drivers.data || []).filter(driver =>
+        driver.kyc_status === 'verified' && driver.active_status === 'active'
+        && driver.account_status === 'active' && Number(driver.is_approved) === 1
+        && driver.availability_status === 'available'
+    );
 
     const selector = id => (
         <div className="d-grid gap-1">
@@ -362,7 +357,7 @@ const DeliveriesTab = () => {
                             className="form-control"
                             placeholder="Search tracking, client, driver, route…"
                             value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
+                            onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
                         />
                     </div>
 
@@ -370,7 +365,7 @@ const DeliveriesTab = () => {
                         className="form-select form-select-sm"
                         style={{ width: 'auto' }}
                         value={sortBy}
-                        onChange={e => setSortBy(e.target.value)}
+                        onChange={e => { setSortBy(e.target.value); setPaginationMode("paged"); setPage(1); }}
                     >
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -425,10 +420,10 @@ const DeliveriesTab = () => {
                         <button
                             type="button"
                             className={`btn ${paginationMode === 'cursor' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                            onClick={() => setPaginationMode('cursor')}
-                            title="O(1) keyset index seek without offset scanning"
+                            onClick={() => { setSortBy('newest'); setPaginationMode('cursor'); }}
+                            title="Browse deliveries with a Load more button"
                         >
-                            ⚡ Keyset
+                            Load more view
                         </button>
                         <button
                             type="button"
@@ -554,6 +549,7 @@ const DeliveriesTab = () => {
                                             >
                                                 {delivery.payment_status === 'paid' ? 'Paid' : 'Pending Payment'}
                                             </span>
+                                            <button className="btn btn-sm btn-outline-primary d-block mt-2" onClick={() => setPaymentDeliveryId(delivery.id)}>Review fare &amp; payment</button>
                                         </td>
                                         <td data-label="Operations">
                                             {renderOperationsAction(delivery)}
@@ -571,7 +567,7 @@ const DeliveriesTab = () => {
                             onLoadMore={loadMoreCursor}
                             loadedCount={cursorItems.length}
                             itemLabel="deliveries"
-                            buttonText="Load More Deliveries (Keyset Seek)"
+                            buttonText="Load more deliveries"
                         />
                     ) : (
                         <Pagination
@@ -585,9 +581,9 @@ const DeliveriesTab = () => {
                     )}
                 </>
             )}
+            {paymentDeliveryId && <PaymentReviewPanel key={paymentDeliveryId} deliveryId={paymentDeliveryId} admin onClose={() => setPaymentDeliveryId(null)} onChanged={fetchInitialCursor} />}
         </div>
     );
 };
 
 export default DeliveriesTab;
-

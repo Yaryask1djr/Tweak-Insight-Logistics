@@ -90,8 +90,8 @@ const DeliveryPersonDashboard = () => {
     // Badge Counters: Active and Available
     const activeQuery = useQuery({
         queryKey: ['driver', 'active-assignments'],
-        queryFn: () => apiGet('/delivery-person/my-assignments?status=all').then(res => res.data || []),
-        select: items => items.filter(item => item.status !== 'delivered' && item.status !== 'cancelled'),
+        queryFn: () => apiGet('/delivery-person/my-assignments?status=active'),
+        select: response => response.data || [],
         staleTime: 15000,
     });
 

@@ -5,6 +5,7 @@
 // -------------------------------------------------------------
 
 // Bootstrap environment & classes
+if (!defined('TIL_API_REQUEST')) define('TIL_API_REQUEST', true);
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/response.php';
@@ -22,6 +23,10 @@ require_once __DIR__ . '/../controllers/DriverOperationsController.php';
 require_once __DIR__ . '/../controllers/OperationsManagementController.php';
 require_once __DIR__ . '/../controllers/LiveTrackingController.php';
 require_once __DIR__ . '/../controllers/ClientKycController.php';
+require_once __DIR__ . '/../controllers/HealthController.php';
+require_once __DIR__ . '/../controllers/ExportController.php';
+require_once __DIR__ . '/../controllers/ReportingController.php';
+require_once __DIR__ . '/../controllers/PaymentController.php';
 
 SecurityHeaders::send();
 
@@ -38,7 +43,8 @@ if (!empty($origin) && in_array($origin, $allowedOrigins, true)) {
 }
 
 header("Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Request-ID");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Request-ID, Idempotency-Key");
+header("Access-Control-Expose-Headers: Idempotency-Replayed");
 header("Access-Control-Max-Age: 86400");
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -71,6 +77,25 @@ function getDb(): PDO {
 // -------------------------------------------------------------
 
 switch (true) {
+    case (in_array($path, ['/payments/paystack/webhook', '/payments/paystack/webhook/'], true) && $method === 'POST'):
+        PaymentController::handle(getDb(), 'webhook'); break;
+    case ($path === '/deliveries/payment' && $method === 'GET'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'payments.manage_own');
+        PaymentController::handle($db, 'view', (int)$user['id']); break;
+    case ($path === '/admin/deliveries/payment' && $method === 'GET'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'operations.payments.read');
+        PaymentController::handle($db, 'admin_view', (int)$user['id']); break;
+    case ($path === '/admin/deliveries/approve-fare' && $method === 'POST'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'operations.fares.approve');
+        PaymentController::handle($db, 'approve', (int)$user['id']); break;
+    case ($path === '/deliveries/payments/initialize' && $method === 'POST'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'payments.manage_own');
+        RateLimiter::check('payment_initialize', $db);
+        PaymentController::handle($db, 'initialize', (int)$user['id']); break;
+    case ($path === '/deliveries/payments/verify' && $method === 'POST'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'payments.manage_own');
+        RateLimiter::check('payment_verify', $db);
+        PaymentController::handle($db, 'verify', (int)$user['id']); break;
     // ---------------------------------------------------------
     // AUTHENTICATION
     // ---------------------------------------------------------
@@ -166,6 +191,13 @@ switch (true) {
         $user = AuthMiddleware::verifyPermission($db, 'delivery.request.create');
         DeliveryController::createDelivery($db, (int)$user['id']);
         break;
+
+    case ($path === '/deliveries/payment-summary' && $method === 'GET'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'delivery.request.read_own'); ReportingController::payments($db, (int)$user['id']); break;
+    case ($path === '/admin/reports/summary' && $method === 'GET'):
+        $db = getDb(); AuthMiddleware::verifyPermission($db, 'operations.audit.read'); ReportingController::analytics($db); break;
+    case ($path === '/admin/exceptions' && $method === 'GET'):
+        $db = getDb(); AuthMiddleware::verifyPermission($db, 'operations.deliveries.read'); ReportingController::exceptions($db); break;
 
     case (($path === '/deliveries/my-requests' || $path === '/deliveries/my-deliveries') && $method === 'GET'):
         $db = getDb();
@@ -277,7 +309,12 @@ switch (true) {
         $db = getDb(); AuthMiddleware::verifyPermission($db, 'operations.audit.read'); AdminController::auditLog($db); break;
 
     case (($path === '/admin/audit-log/export' || $path === '/admin/audit-logs/export') && $method === 'POST'):
-        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'operations.audit.read'); AdminController::queueAuditExport($db, (int)$user['id']); break;
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'operations.audit.read'); ExportController::request($db, (int)$user['id'], 'audit'); break;
+
+    case ($path === '/admin/reports/deliveries/export' && $method === 'POST'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'operations.audit.read'); ExportController::request($db, (int)$user['id'], 'deliveries'); break;
+    case (($path === '/admin/exports/status' || $path === '/admin/exports/download') && $method === 'GET'):
+        $db = getDb(); $user = AuthMiddleware::verifyPermission($db, 'operations.audit.read'); ExportController::get($db, (int)$user['id'], $path === '/admin/exports/download'); break;
 
     case ($path === '/admin/reports/deliveries' && $method === 'GET'):
         $db = getDb(); AuthMiddleware::verifyPermission($db, 'operations.deliveries.read'); AdminController::deliveryReport($db); break;
@@ -399,14 +436,10 @@ switch (true) {
         DeliveryPersonController::getEarningsSummary($db, (int)$user['id']);
         break;
 
-    // Health check
-    case ($path === '/' || $path === '/health'):
-        Response::json([
-            'service' => 'Tweak Insight Logistics API',
-            'version' => '2.0.0',
-            'status' => 'operational',
-            'timestamp' => date('c')
-        ], 'API operational.');
+    case (in_array($path, ['/', '/health', '/health/live'], true) && $method === 'GET'):
+        Response::json(['status' => 'alive'], 'API process is running.');
+    case ($path === '/health/ready' && $method === 'GET'):
+        HealthController::check(static fn() => getDb());
         break;
 
     default:

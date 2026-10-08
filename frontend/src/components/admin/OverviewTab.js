@@ -1,4 +1,4 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../api/client";
 import { StatCardSkeleton } from "../common/SkeletonLoader";
 import Icon from "../common/Icon";

@@ -1,0 +1,128 @@
+[
+  {
+    "test": "verify_enterprise_boundaries",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "PASS enterprise boundaries: 58 assertions (SQLite; native locking and process execution not exercised)."
+  },
+  {
+    "test": "verify_atomic_booking",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "PASS: 113 atomic booking/outbox checks (SQLite dialect adapter; MySQL locking requires integration test)."
+  },
+  {
+    "test": "verify_delivery_payments",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "PASS: 83 fare/payment checks (SQLite + simulated provider; native MySQL and live Paystack not exercised)."
+  },
+  {
+    "test": "verify_driver_delivery_progress",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "PASS: 135 driver milestone/payment-gate checks (SQLite; MySQL locking and provider verification not tested)."
+  },
+  {
+    "test": "verify_delivery_resolution",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "PASS: 48 cancellation and rollback checks (SQLite; MySQL locks not simulated)."
+  },
+  {
+    "test": "verify_runtime_boundaries",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "PASS: 66 pricing, readiness, refresh, listing and webhook boundary checks."
+  },
+  {
+    "test": "verify_refresh_and_exports",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "PASS: 18 actual refresh-rotation/export authorization and recovery checks (SQLite dialect adapter)."
+  },
+  {
+    "test": "verify_audit_helpers",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Audit pagination, CSV and tracking privacy helper checks passed."
+  },
+  {
+    "test": "verify_authorization_policy",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Authorization policy checks passed."
+  },
+  {
+    "test": "verify_client_ip_resolution",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Client IP resolution checks passed."
+  },
+  {
+    "test": "verify_credential_configuration",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Credential configuration verification passed."
+  },
+  {
+    "test": "verify_kano_address_validation",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "\u2713 Kano address normalization and district recognition verified.\n\u2713 All 4.1 Kano Address Validation UX tests passed successfully."
+  },
+  {
+    "test": "verify_notification_catalog",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Notification catalog checks passed."
+  },
+  {
+    "test": "verify_tracking_privacy",
+    "status": "blocked-or-failed",
+    "exit_code": 0,
+    "output": "Warning: require_once(/workspace/scratch/3ed182f761b7/Tweak-Insight-Logistics/backend/helpers/../vendor/autoload.php): Failed to open stream: No such file or directory in /workspace/scratch/3ed182f761b7/Tweak-Insight-Logistics/backend/helpers/jwt.php on line 4\n\nFatal error: Uncaught Error: Failed opening required '/workspace/scratch/3ed182f761b7/Tweak-Insight-Logistics/backend/helpers/../vendor/autoload.php' (include_path='.:') in /workspace/scratch/3ed182f761b7/Tweak-Insight-Logistics/backend/helpers/jwt.php:4\nStack trace:\n#0 /workspace/scratch/3ed182f761b7/Tweak-Insight-Logistics/backend/tests/verify_tracking_privacy.php(5): require_once()\n#1 {main}\n  thrown in /workspace/scratch/3ed182f761b7/Tweak-Insight-Logistics/backend/helpers/jwt.php on line 4"
+  },
+  {
+    "test": "verify_integration_contracts",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Backend integration contract checks passed."
+  },
+  {
+    "test": "verify_operations_workflow",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Operations workflow policy checks passed. [INFO] Live MySQL database unreachable; skipping live transactional fixture."
+  },
+  {
+    "test": "verify_document_storage_security",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "Document storage security checks passed."
+  },
+  {
+    "test": "verify_cors_policy",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "CORS whitelist policy verification passed."
+  },
+  {
+    "test": "verify_pending_deliverymen_query",
+    "status": "pass",
+    "exit_code": 0,
+    "output": "\u2713 AdminController::getPendingDeliverymen optimized method verified.\n\u2713 All 3.3 Large Group-By Query optimization tests passed successfully."
+  },
+  {
+    "test": "verify_telemetry_isolation",
+    "status": "blocked-or-failed",
+    "exit_code": 0,
+    "output": "Command failed; inspect the application log."
+  },
+  {
+    "test": "verify_worker_daemon",
+    "status": "blocked-or-failed",
+    "exit_code": 0,
+    "output": ">>> Starting Verification Suite: Background Job Worker Daemonization <<<\n\n[INFO] Live MySQL database unreachable (SQLSTATE[HY000] [2006] MySQL server has gone away). Offline test mode activated.\n1. Checking production process manager configurations...\n   [PASS] systemd and supervisord service files verified.\n2. Testing CLI argument parser and --help output...\nCommand failed; inspect the application log."
+  }
+]

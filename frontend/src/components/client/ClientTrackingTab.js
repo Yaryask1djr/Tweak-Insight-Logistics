@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../api/client';
 import LiveLocationMap from '../common/LiveLocationMap';
 import { showToast } from '../common/Toast';
@@ -21,17 +21,18 @@ const ClientTrackingTab = ({
     useEffect(() => {
         if (initialSelectedDelivery) {
             setSelectedDelivery(initialSelectedDelivery);
-        } else if (!selectedDelivery && deliveries.length > 0) {
+        } else if (deliveries.length > 0) {
             // Default to first active delivery, or first delivery
             const firstActive = deliveries.find(d =>
                 ['assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived'].includes(d.status)
             );
-            setSelectedDelivery(firstActive || deliveries[0]);
+            setSelectedDelivery(current => current || firstActive || deliveries[0]);
         }
     }, [initialSelectedDelivery, deliveries]);
 
     // Live location polling when selectedDelivery changes
     useEffect(() => {
+        setLiveLocation(null);
         if (!selectedDelivery?.id) return;
         let isMounted = true;
 
@@ -121,11 +122,9 @@ const ClientTrackingTab = ({
             };
         }
         if (delivery.status === 'in_transit' || delivery.status === 'arrived') {
-            const distance = Number(delivery.distance_km) || 5;
-            const estMins = Math.max(10, Math.round(distance * 3.5));
             return {
-                label: 'Estimated Arrival',
-                text: `~${estMins} mins (approx. ${estMins < 30 ? 'on schedule' : 'moderate traffic'})`,
+                label: 'Status',
+                text: delivery.status === 'arrived' ? 'Driver has arrived at the destination' : 'In transit; arrival estimate unavailable',
                 isFinal: false
             };
         }

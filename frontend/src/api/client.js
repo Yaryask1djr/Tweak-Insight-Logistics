@@ -41,19 +41,35 @@ const notifySessionExpired = () => {
  */
 export const refreshSession = async () => {
     if (!refreshPromise) {
-        refreshPromise = axios.post(`${API_BASE}/auth/refresh`, {}, {
-            _tilApi: true,
-            _skipAuthRefresh: true,
-            withCredentials: true,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        }).then((response) => {
+        const rotate = async () => {
+            let response;
+            for (let attempt = 0; attempt < 4; attempt++) {
+                try {
+                    response = await axios.post(`${API_BASE}/auth/refresh`, {}, {
+                        _tilApi: true,
+                        _skipAuthRefresh: true,
+                        withCredentials: true,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    break;
+                } catch (error) {
+                    if (error.response?.status !== 409 || attempt === 3) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 150 * (attempt + 1)));
+                }
+            }
             const session = response.data?.data;
             if (!session?.access_token || !session?.user) {
                 throw new Error('Refresh response did not include a session.');
             }
             setAccessToken(session.access_token);
             return session;
-        }).finally(() => {
+        };
+        // Cookie rotations across tabs share one origin-scoped lock. Browsers
+        // without Web Locks use the bounded server conflict/retry path above.
+        const rotation = typeof navigator !== 'undefined' && navigator.locks
+            ? navigator.locks.request(`til.refresh.${API_BASE}`, rotate)
+            : rotate();
+        refreshPromise = rotation.finally(() => {
             refreshPromise = null;
         });
     }
@@ -63,6 +79,7 @@ export const refreshSession = async () => {
 /** Pre-configured Axios instance for application API requests. */
 export const apiClient = axios.create({
     baseURL: API_BASE,
+    timeout: 15000,
     withCredentials: true,
     headers: { 'Content-Type': 'application/json' },
 });
@@ -70,6 +87,7 @@ export const apiClient = axios.create({
 const attachRequestAuthentication = (config) => {
     if (!isApiRequest(config)) return config;
 
+    if (!config.timeout) config.timeout = 15000;
     config.withCredentials = true;
     if (!isCredentialBootstrapRequest(config) && accessToken) {
         config.headers = config.headers || {};
@@ -98,8 +116,8 @@ const retryAfterRefresh = (client) => async (error) => {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${session.access_token}`;
         return client(config);
-    } catch {
-        notifySessionExpired();
+    } catch (refreshError) {
+        if (refreshError.response?.status === 401) notifySessionExpired();
         return Promise.reject(error);
     }
 };

@@ -117,7 +117,7 @@ const AvailableJobsTab = () => {
                                                 Package Details:
                                             </small>
                                             <strong className="text-dark">
-                                                {job.item_description} {job.item_category ? `(${job.item_category})` : ''}
+                                                {job.item_category?.replaceAll('_', ' ') || 'Parcel'} · {job.item_quantity || 1} item(s)
                                             </strong>
                                             <div className="d-flex align-items-center gap-2 mt-1 flex-wrap">
                                                 <span className="badge bg-light text-dark border">
@@ -141,8 +141,7 @@ const AvailableJobsTab = () => {
                                                 {job.delivery_address}
                                             </div>
                                             <div>
-                                                👤 <strong>Sender:</strong> {job.client_name} (
-                                                {job.client_phone})
+                                                Exact addresses and contact details are available after assignment.
                                             </div>
                                         </div>
 

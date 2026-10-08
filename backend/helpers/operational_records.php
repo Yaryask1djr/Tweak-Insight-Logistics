@@ -1,11 +1,12 @@
 <?php
+require_once __DIR__ . '/log_sanitizer.php';
 
 /**
  * Writes the append-only operational records introduced by the workflow schema.
  *
- * The current application can be deployed before the database migration. In that
- * state these methods safely no-op; once the tables exist, every connected
- * transition begins creating durable history without changing API responses.
+ * Legacy callers retain best-effort recording. Callers passing required=true
+ * propagate missing-table and insert failures so their enclosing transaction
+ * rolls back together with the business change.
  */
 final class OperationalRecords
 {
@@ -20,9 +21,10 @@ final class OperationalRecords
         ?int $actorUserId,
         string $actorRole,
         ?string $reason = null,
-        array $metadata = []
+        array $metadata = [],
+        bool $required = false
     ): void {
-        if (!self::hasTable($db, 'delivery_status_history')) {
+        if (!$required && !self::hasTable($db, 'delivery_status_history')) {
             return;
         }
 
@@ -39,7 +41,7 @@ final class OperationalRecords
                 $actorUserId,
                 $actorRole,
                 $reason,
-                $metadata ? json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
+                $metadata ? json_encode($metadata, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
             ]);
 
             self::audit(
@@ -51,10 +53,13 @@ final class OperationalRecords
                 $deliveryId,
                 ['status' => $fromStatus],
                 ['status' => $toStatus],
-                $metadata + ['reason' => $reason]
+                $metadata + ['reason' => $reason],
+                $deliveryId,
+                $required
             );
         } catch (Throwable $exception) {
             self::logFailure('Unable to write delivery status history', $exception);
+            if ($required) throw $exception;
         }
     }
 
@@ -68,9 +73,10 @@ final class OperationalRecords
         ?array $beforeState = null,
         ?array $afterState = null,
         array $metadata = [],
-        ?int $deliveryId = null
+        ?int $deliveryId = null,
+        bool $required = false
     ): void {
-        if (!self::hasTable($db, 'audit_logs')) {
+        if (!$required && !self::hasTable($db, 'audit_logs')) {
             return;
         }
 
@@ -89,14 +95,15 @@ final class OperationalRecords
                 $entityType,
                 $entityId,
                 $deliveryId,
-                $beforeState ? json_encode($beforeState, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
-                $afterState ? json_encode($afterState, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
-                $metadata ? json_encode($metadata, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
-                $_SERVER['HTTP_X_REQUEST_ID'] ?? null,
+                $beforeState ? json_encode($beforeState, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
+                $afterState ? json_encode($afterState, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
+                $metadata ? json_encode($metadata, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
+                LogSanitizer::requestId($_SERVER['HTTP_X_REQUEST_ID'] ?? null),
                 $packedIp ?: null,
             ]);
         } catch (Throwable $exception) {
             self::logFailure('Unable to write operational audit record', $exception);
+            if ($required) throw $exception;
         }
     }
 
@@ -153,9 +160,10 @@ final class OperationalRecords
     }
 
     /** Store a proof event without persisting the recipient OTP itself. */
-    public static function otpProofCaptured(PDO $db, int $deliveryId, int $driverUserId): void
+    public static function otpProofCaptured(PDO $db, int $deliveryId, int $driverUserId, bool $required = false): void
     {
         if (!self::hasTable($db, 'drivers') || !self::hasTable($db, 'delivery_proofs')) {
+            if ($required) throw new RuntimeException('Delivery proof storage is unavailable.');
             return;
         }
 
@@ -164,6 +172,7 @@ final class OperationalRecords
             $driver->execute([$driverUserId]);
             $driverId = (int)$driver->fetchColumn();
             if (!$driverId) {
+                if ($required) throw new RuntimeException('The driver profile required for delivery proof is missing.');
                 return;
             }
 
@@ -188,10 +197,12 @@ final class OperationalRecords
                 null,
                 ['proof_type' => 'otp', 'verification_status' => 'verified'],
                 [],
-                $deliveryId
+                $deliveryId,
+                $required
             );
         } catch (Throwable $exception) {
             self::logFailure('Unable to write delivery proof record', $exception);
+            if ($required) throw $exception;
         }
     }
 

@@ -1,86 +1,29 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../api/client";
-import { showToast } from "../common/Toast";
+import ReportExportButton from "../common/ReportExportButton";
 import Icon from "../common/Icon";
 import { StatCardSkeleton } from "../common/SkeletonLoader";
 
 const ReportsTab = () => {
     const [period, setPeriod] = useState("30");
     const [filters, setFilters] = useState({ from: "", to: "", status: "" });
-    const [exporting, setExporting] = useState(false);
-
-    const statsQuery = useQuery({
-        queryKey: ["admin", "dashboard-stats"],
-        queryFn: () => apiGet("/admin/dashboard-stats").then(res => res.data),
-        staleTime: 30000,
-    });
-
     const deliveriesQuery = useQuery({
-        queryKey: ["admin", "analytics-deliveries"],
-        queryFn: () => apiGet("/admin/all-deliveries?limit=100").then(res => res.data?.deliveries || res.data?.data || []),
+        queryKey: ["admin", "analytics-summary", period],
+        queryFn: ({ signal }) => apiGet(`/admin/reports/summary?period=${period}`, { signal }),
         staleTime: 30000,
     });
-
-    const exportDeliveries = async () => {
-        setExporting(true);
-        try {
-            const params = new URLSearchParams(
-                Object.entries(filters).filter(([, value]) => value)
-            );
-            const blob = await apiGet(`/admin/reports/deliveries?${params}`, { responseType: "blob" });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "delivery-report.csv";
-            link.click();
-            URL.revokeObjectURL(url);
-            showToast.success("Delivery activity report downloaded.");
-        } catch {
-            showToast.error("Could not generate the delivery report.");
-        } finally {
-            setExporting(false);
-        }
-    };
-
-    const stats = statsQuery.data || {};
-    const deliveries = deliveriesQuery.data || [];
-
-    // Filter deliveries by period
-    const now = new Date();
-    const filteredDeliveries = deliveries.filter(d => {
-        if (!d.request_time) return true;
-        const dDate = new Date(d.request_time);
-        if (period === "today") {
-            return dDate.toDateString() === now.toDateString();
-        }
-        if (period === "7") {
-            return (now - dDate) <= 7 * 24 * 60 * 60 * 1000;
-        }
-        if (period === "30") {
-            return (now - dDate) <= 30 * 24 * 60 * 60 * 1000;
-        }
-        return true;
-    });
-
-    const sample = filteredDeliveries.length ? filteredDeliveries : deliveries;
-    const totalVolume = sample.length || 1;
-    const completedCount = sample.filter(d => ["delivered", "completed"].includes(d.status)).length;
-    const delayedCount = sample.filter(d => {
-        if (["delivered", "completed", "cancelled", "rejected", "failed"].includes(d.status)) return false;
-        if (d.preferred_delivery_time && new Date(d.preferred_delivery_time) < now) return true;
-        return false;
-    }).length;
-
-    const completionRate = Math.round((completedCount / totalVolume) * 100);
-    const delayRate = Math.round((delayedCount / totalVolume) * 100);
-    const revenueSample = sample.reduce((acc, d) => acc + (d.payment_status === "paid" ? Number(d.total_cost || 0) : 0), 0);
-
-    const distances = sample.map(d => Number(d.distance_km || 0)).filter(d => d > 0);
-    const avgDistance = distances.length ? (distances.reduce((a, b) => a + b, 0) / distances.length).toFixed(1) : "5.4";
-
-    const expressCount = sample.filter(d => (d.service_type || "").toLowerCase().includes("express")).length;
+    const totals = deliveriesQuery.data?.data || {};
+    const totalVolume = Number(totals.total || 0);
+    const completionRate = totalVolume ? Math.round(Number(totals.completed || 0) / totalVolume * 100) : 0;
+    const delayRate = totalVolume ? Math.round(Number(totals.delayed || 0) / totalVolume * 100) : 0;
+    const revenueSample = Number(totals.paid_amount || 0);
+    const avgDistance = totals.average_distance == null ? "—" : Number(totals.average_distance).toFixed(1);
+    const expressCount = Number(totals.same_day || 0);
     const standardCount = totalVolume - expressCount;
+    const expressPercent = totalVolume ? Math.round(expressCount / totalVolume * 100) : 0;
+    const standardPercent = totalVolume ? 100 - expressPercent : 0;
+    if (deliveriesQuery.isError) return <div role="alert" className="alert alert-danger">Report totals are unavailable. <button className="btn btn-sm btn-outline-danger" onClick={() => deliveriesQuery.refetch()}>Retry</button></div>;
 
     return (
         <div className="card border-0 shadow-sm custom-card p-4">
@@ -88,7 +31,7 @@ const ReportsTab = () => {
                 <div>
                     <h4 className="fw-bold mb-1">Analytics & Operational Reports</h4>
                     <p className="text-muted small mb-0">
-                        Operational efficiency metrics, delivery service quality, and CSV exports.
+                        Metrics cover all shipments in the selected period. Paid totals reflect recorded payment status.
                     </p>
                 </div>
                 {/* Period Selector */}
@@ -112,7 +55,7 @@ const ReportsTab = () => {
             </div>
 
             {/* Essential Metrics Cards */}
-            {statsQuery.isLoading ? (
+            {deliveriesQuery.isLoading ? (
                 <StatCardSkeleton count={6} />
             ) : (
                 <div className="row g-3 mb-4">
@@ -171,23 +114,23 @@ const ReportsTab = () => {
                             <strong className="small text-uppercase text-muted" style={{ fontSize: "0.75rem" }}>
                                 Service Type Share
                             </strong>
-                            <span className="small text-muted">{expressCount} Express · {standardCount} Standard</span>
+                            <span className="small text-muted">{expressCount} Same-day · {standardCount} Scheduled / business</span>
                         </div>
                         <div className="progress" style={{ height: "12px" }}>
                             <div
                                 className="progress-bar bg-danger"
-                                style={{ width: `${(expressCount / totalVolume) * 100}%` }}
-                                title="Express Deliveries"
+                                style={{ width: `${expressPercent}%` }}
+                                title="Same-day Deliveries"
                             />
                             <div
                                 className="progress-bar bg-primary"
-                                style={{ width: `${(standardCount / totalVolume) * 100}%` }}
-                                title="Standard Deliveries"
+                                style={{ width: `${standardPercent}%` }}
+                                title="Scheduled / business Deliveries"
                             />
                         </div>
                         <div className="d-flex justify-content-between small text-muted mt-2">
-                            <span>🚀 Express: {Math.round((expressCount / totalVolume) * 100)}%</span>
-                            <span>📦 Standard: {Math.round((standardCount / totalVolume) * 100)}%</span>
+                            <span>🚀 Same-day: {expressPercent}% ({expressCount})</span>
+                            <span>📦 Scheduled / business: {standardPercent}% ({standardCount})</span>
                         </div>
                     </div>
                 </div>
@@ -198,7 +141,7 @@ const ReportsTab = () => {
                             <strong className="small text-uppercase text-muted" style={{ fontSize: "0.75rem" }}>
                                 Quality Benchmark
                             </strong>
-                            <span className="badge bg-success">Standard Met</span>
+                            <span className="badge bg-success">Scheduled / business Met</span>
                         </div>
                         <p className="mb-1 small text-muted">
                             Kano Metropolitan target SLA: 90% completion within 45 minutes of dispatch.
@@ -238,9 +181,7 @@ const ReportsTab = () => {
                         </select>
                     </div>
                     <div className="col-md-3">
-                        <button type="button" className="btn btn-primary w-100" onClick={exportDeliveries} disabled={exporting}>
-                            <Icon name="download" size={16} /> {exporting ? "Generating..." : "Export CSV"}
-                        </button>
+                        <ReportExportButton kind="deliveries" filters={filters} />
                     </div>
                 </div>
             </div>

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, clearAccessToken, refreshSession, setAccessToken } from '../api/client';
+import { queryClient } from '../api/queryClient';
 
 const AuthContext = createContext(null);
 
@@ -9,10 +10,12 @@ export const AuthProvider = ({ children }) => {
 
     const clearSession = useCallback(() => {
         clearAccessToken();
+        queryClient.clear();
         setUser(null);
     }, []);
 
     const login = useCallback((userData, token) => {
+        queryClient.clear();
         setAccessToken(token);
         setUser(userData);
     }, []);

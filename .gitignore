@@ -35,10 +35,13 @@ yarn-error.log*
 
 # ==========================================================
 # Production build artifacts
-# (frontend/build is intermediate; authoritative build lives
-# in backend/public/static after `npm run build:backend`)
+# (frontend/build is intermediate; build:backend prepares an
+# immutable backend/public/releases directory for activation)
 # ==========================================================
 /frontend/build/
+/backend/public/releases/
+/backend/public/.active-release.json*
+/backend/public/.release.lock
 
 # ==========================================================
 # IDE, Editor & OS artifacts

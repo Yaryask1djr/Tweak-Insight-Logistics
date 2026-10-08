@@ -4,7 +4,8 @@ const ThemeContext = createContext(null);
 const STORAGE_KEY = 'til-theme';
 
 const preferredTheme = () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    let saved;
+    try { saved = localStorage.getItem(STORAGE_KEY); } catch { /* Storage can be disabled by the browser. */ }
     if (saved === 'light' || saved === 'dark') return saved;
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
@@ -15,7 +16,7 @@ export const ThemeProvider = ({ children }) => {
     useEffect(() => {
         document.documentElement.dataset.theme = theme;
         document.documentElement.style.colorScheme = theme;
-        localStorage.setItem(STORAGE_KEY, theme);
+        try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* The in-memory theme remains usable. */ }
     }, [theme]);
 
     const value = useMemo(() => ({

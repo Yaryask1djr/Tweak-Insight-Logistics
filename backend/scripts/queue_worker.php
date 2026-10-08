@@ -15,6 +15,10 @@
  *   php backend/scripts/queue_worker.php --status                (Display live worker status/heartbeat)
  */
 
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
+}
 require_once __DIR__ . '/../bootstrap.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/job_queue.php';
@@ -22,6 +26,9 @@ require_once __DIR__ . '/../helpers/logger.php';
 require_once __DIR__ . '/../helpers/notification_service.php';
 require_once __DIR__ . '/../helpers/storage_adapter.php';
 require_once __DIR__ . '/../helpers/monitoring.php';
+require_once __DIR__ . '/../helpers/booking_outbox.php';
+require_once __DIR__ . '/../helpers/report_export.php';
+require_once __DIR__ . '/../helpers/payment_webhooks.php';
 
 // --- Parse CLI Options ---
 $shortOpts = "q:s:m:j:h";
@@ -130,6 +137,7 @@ $recordHeartbeat = function (string $status, int $processed) use ($heartbeatFile
         'queue'           => $queue,
         'started_at'      => date('c', (int)$startTime),
         'last_heartbeat'  => date('c'),
+        'updated_at_unix' => time(),
         'uptime_seconds'  => (int)(microtime(true) - $startTime),
         'jobs_processed'  => $processed,
         'memory_usage_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
@@ -143,7 +151,7 @@ $recordHeartbeat = function (string $status, int $processed) use ($heartbeatFile
 $database = new Database();
 $db = null;
 
-function ensureDbConnection(Database $database, ?PDO &$db): PDO
+function ensureDbConnection(Database &$database, ?PDO &$db): PDO
 {
     if ($db !== null) {
         try {
@@ -152,6 +160,8 @@ function ensureDbConnection(Database $database, ?PDO &$db): PDO
         } catch (Throwable $e) {
             echo sprintf("[%s] Lost database connection: %s. Reconnecting...\n", date('Y-m-d H:i:s'), $e->getMessage());
             $db = null;
+            // Database caches its PDO; replace the wrapper as well as the dead handle.
+            $database = new Database();
         }
     }
 
@@ -164,6 +174,7 @@ $db = ensureDbConnection($database, $db);
 $recordHeartbeat('running', 0);
 
 $processed = 0;
+$exitCode = 0;
 $lastHeartbeatTime = 0;
 
 // --- Worker Processing Loop ---
@@ -185,8 +196,34 @@ do {
         $db = ensureDbConnection($database, $db);
     } catch (Throwable $e) {
         echo sprintf("[%s] Database connection failed: %s. Retrying in %ds...\n", date('Y-m-d H:i:s'), $e->getMessage(), $sleepSeconds);
+        $recordHeartbeat('database_error', $processed);
+        if ($once) { $exitCode = 1; break; }
         sleep($sleepSeconds);
         continue;
+    }
+
+    // Committed booking events are durable even when Redis is unavailable.
+    $outboxProcessed = false;
+    if ($queue === 'default') {
+        try {
+            $outboxProcessed = BookingOutbox::processNext($db);
+            if ($outboxProcessed) $processed++;
+            if (ReportExport::processNext($db, static fn() => $recordHeartbeat('processing', $processed))) { $outboxProcessed = true; $processed++; }
+        } catch (Throwable $error) {
+            Logger::error('Booking outbox projection failed', ['error' => $error->getMessage()]);
+            $recordHeartbeat('outbox_error', $processed);
+            if ($once) { $exitCode = 1; break; }
+        }
+        if ($processed >= $maxJobs) break;
+        try {
+            $recordHeartbeat('processing', $processed);
+            if (PaymentWebhooks::processNext($db)) { $outboxProcessed = true; $processed++; }
+        } catch (Throwable $error) {
+            Logger::error('Payment inbox processing failed', ['type' => get_class($error)]);
+            $recordHeartbeat('payment_inbox_error', $processed);
+            if ($once) { $exitCode = 1; break; }
+        }
+        if ($processed >= $maxJobs) break;
     }
 
     // 4. Pop next job atomically
@@ -195,6 +232,8 @@ do {
         $job = JobQueue::pop($queue);
     } catch (Throwable $e) {
         echo sprintf("[%s] Error checking job queue: %s\n", date('Y-m-d H:i:s'), $e->getMessage());
+        $recordHeartbeat('queue_error', $processed);
+        if ($once) { $exitCode = 1; break; }
         sleep($sleepSeconds);
         continue;
     }
@@ -202,25 +241,32 @@ do {
     if ($job) {
         $processed++;
         $recordHeartbeat('processing', $processed);
-        echo sprintf("[%s] Processing job #%d (%s)...\n", date('Y-m-d H:i:s'), $job['id'], $job['job_type']);
+        echo sprintf("[%s] Processing job #%s (%s)...\n", date('Y-m-d H:i:s'), $job['id'], $job['job_type']);
 
         $jobStart = microtime(true);
+        $lastRenewal = microtime(true);
+        $renewLease = function (bool $force = false) use ($job, &$lastRenewal, $recordHeartbeat, &$processed): void {
+            if (!$force && microtime(true) - $lastRenewal < JobQueue::visibilityTimeout() / 3) return;
+            if (!JobQueue::renew($job)) throw new RuntimeException('Job reservation expired; handler must stop.');
+            $lastRenewal = microtime(true);
+            $recordHeartbeat('processing', $processed);
+        };
+        $handlerSucceeded = false;
         try {
+            $renewLease(true);
             // Dispatch handlers based on job_type
             match ($job['job_type']) {
                 'notification.external_dispatch' => handleExternalNotification($db, $job['payload']),
-                'audit.export'                   => handleAuditExport($db, $job['payload']),
+                'audit.export'                   => handleAuditExport($db, $job['payload'], $renewLease),
                 'storage.delete'                 => handleStorageDelete($job['payload']),
                 'webhook.deliver'                => handleWebhookDelivery($job['payload']),
                 default                          => handleGenericJob($job),
             };
 
-            JobQueue::complete((int)$job['id']);
-            $durationMs = round((microtime(true) - $jobStart) * 1000, 2);
-            echo sprintf("[%s] Job #%d completed successfully in %.2fms.\n", date('Y-m-d H:i:s'), $job['id'], $durationMs);
+            $handlerSucceeded = true;
         } catch (Throwable $e) {
             $durationMs = round((microtime(true) - $jobStart) * 1000, 2);
-            echo sprintf("[%s] Job #%d failed after %.2fms: %s\n", date('Y-m-d H:i:s'), $job['id'], $durationMs, $e->getMessage());
+            echo sprintf("[%s] Job #%s failed after %.2fms: %s\n", date('Y-m-d H:i:s'), $job['id'], $durationMs, $e->getMessage());
             Logger::error("Queue job #{$job['id']} ({$job['job_type']}) failed", [
                 'job_id'    => $job['id'],
                 'job_type'  => $job['job_type'],
@@ -229,14 +275,38 @@ do {
                 'trace'     => $e->getTraceAsString(),
             ]);
             Monitoring::queueFailure([
-                'job_id' => (int)$job['id'],
+                'job_id' => (string)$job['id'],
                 'job_type' => $job['job_type'],
                 'attempts' => (int)$job['attempts'],
                 'max_attempts' => (int)$job['max_attempts'],
                 'error' => $e->getMessage(),
             ]);
-            JobQueue::fail((int)$job['id'], $e->getMessage(), (int)$job['attempts'], (int)$job['max_attempts']);
+            try {
+                if (!JobQueue::fail($job, $e->getMessage())) {
+                    throw new RuntimeException('Reservation was lost before retry could be recorded.');
+                }
+            } catch (Throwable $queueError) {
+                // Leave the reservation for recovery; never report a successful retry write.
+                Logger::error('Queue retry could not be recorded', ['job_id' => $job['id'], 'error' => $queueError->getMessage()]);
+                $recordHeartbeat('queue_error', $processed);
+                $exitCode = 1;
+            }
         }
+        if ($handlerSucceeded) {
+            try {
+                if (!JobQueue::complete($job)) {
+                    throw new RuntimeException('Reservation was lost before completion could be recorded.');
+                }
+                $durationMs = round((microtime(true) - $jobStart) * 1000, 2);
+                echo sprintf("[%s] Job #%s completed successfully in %.2fms.\n", date('Y-m-d H:i:s'), $job['id'], $durationMs);
+            } catch (Throwable $queueError) {
+                // Handler succeeded: an uncertain ack must not call the failure handler.
+                Logger::error('Queue completion could not be recorded', ['job_id' => $job['id'], 'error' => $queueError->getMessage()]);
+                $recordHeartbeat('queue_error', $processed);
+                $exitCode = 1;
+            }
+        }
+        if ($exitCode !== 0) break; // Let the supervisor restart a worker with broken queue access.
 
         // 5. Memory Limit Protection (recyle daemon process when threshold is reached)
         $currentMemMb = memory_get_usage(true) / 1024 / 1024;
@@ -253,6 +323,7 @@ do {
             break;
         }
     } else {
+        if ($outboxProcessed) continue;
         if ($once) {
             break;
         }
@@ -260,9 +331,9 @@ do {
     }
 } while (!$stopRequested);
 
-$recordHeartbeat('stopped', $processed);
-echo sprintf("[Queue Worker] Worker finished. Total jobs processed: %d. Exiting normally.\n", $processed);
-exit(0);
+$recordHeartbeat($exitCode === 0 ? 'stopped' : 'queue_error', $processed);
+echo sprintf("[Queue Worker] Worker finished. Total jobs processed: %d. Exit code: %d.\n", $processed, $exitCode);
+exit($exitCode);
 
 // =========================================================================
 // Job Handler Implementations
@@ -273,135 +344,16 @@ exit(0);
  */
 function handleExternalNotification(PDO $db, array $payload): void
 {
-    $userId     = (int)($payload['user_id'] ?? 0);
-    $deliveryId = !empty($payload['delivery_id']) ? (int)$payload['delivery_id'] : null;
-    $type       = $payload['type'] ?? 'generic';
-    $title      = $payload['title'] ?? '';
-    $body       = $payload['body'] ?? '';
-    $channel    = $payload['channel'] ?? 'external';
-
-    // Retrieve recipient phone and email for external provider
-    $contact = ['phone' => null, 'email' => null];
-    if ($userId > 0) {
-        $userStmt = $db->prepare('SELECT phone, email FROM users WHERE id = ?');
-        $userStmt->execute([$userId]);
-        $row = $userStmt->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            $contact['phone'] = $row['phone'];
-            $contact['email'] = $row['email'];
-        }
-    }
-
-    Logger::info('External notification dispatched asynchronously by worker', [
-        'user_id'     => $userId,
-        'delivery_id' => $deliveryId,
-        'type'        => $type,
-        'channel'     => $channel,
-        'recipient'   => $contact,
-        'title'       => $title,
-    ]);
+    // Logging is not provider delivery. Retain retry/dead-letter semantics.
+    throw new RuntimeException('External notification provider is not configured; nothing was sent.');
 }
 
 /**
  * Generates asynchronous operational audit log exports as downloadable CSV files.
  */
-function handleAuditExport(PDO $db, array $payload): void
+function handleAuditExport(PDO $db, array $payload, callable $renewLease): void
 {
-    $adminId   = (int)($payload['admin_id'] ?? 0);
-    $filters   = $payload['filters'] ?? [];
-    $exportId  = $payload['export_id'] ?? bin2hex(random_bytes(6));
-
-    $where  = [];
-    $params = [];
-
-    if (!empty($filters['action'])) {
-        $where[] = "a.action LIKE :action";
-        $params['action'] = "%" . trim($filters['action']) . "%";
-    }
-    if (!empty($filters['actor_role'])) {
-        $where[] = "a.actor_role = :actor_role";
-        $params['actor_role'] = trim($filters['actor_role']);
-    }
-    if (!empty($filters['delivery_id'])) {
-        $where[] = "a.delivery_id = :delivery_id";
-        $params['delivery_id'] = (int)$filters['delivery_id'];
-    }
-    if (!empty($filters['from_date'])) {
-        $where[] = "a.created_at >= :from_date";
-        $params['from_date'] = trim($filters['from_date']) . ' 00:00:00';
-    }
-    if (!empty($filters['to_date'])) {
-        $where[] = "a.created_at < DATE_ADD(:to_date, INTERVAL 1 DAY)";
-        $params['to_date'] = trim($filters['to_date']);
-    }
-
-    $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-    $query = "SELECT a.id, a.action, a.entity_type, a.entity_id, a.delivery_id, a.actor_role, a.created_at, u.full_name AS actor_name 
-              FROM audit_logs a 
-              LEFT JOIN users u ON u.id = a.actor_user_id 
-              {$whereSql} 
-              ORDER BY a.created_at DESC";
-
-    $exportDir = (defined('STORAGE_PATH') ? STORAGE_PATH : __DIR__ . '/../storage') . '/exports';
-    if (!is_dir($exportDir)) {
-        @mkdir($exportDir, 0755, true);
-    }
-
-    $filename = sprintf('audit_export_%s_%s.csv', date('Ymd_His'), $exportId);
-    $filepath = $exportDir . '/' . $filename;
-
-    $stmt = $db->prepare($query);
-    $stmt->execute($params);
-
-    $fp = fopen($filepath, 'w');
-    if (!$fp) {
-        throw new RuntimeException("Unable to create export file at {$filepath}");
-    }
-
-    // Write CSV header
-    fputcsv($fp, ['Log ID', 'Timestamp (UTC)', 'Action', 'Actor Role', 'Actor Name', 'Entity Type', 'Entity ID', 'Delivery ID']);
-
-    $recordCount = 0;
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($fp, [
-            $row['id'],
-            $row['created_at'],
-            $row['action'],
-            $row['actor_role'],
-            $row['actor_name'] ?: 'System',
-            $row['entity_type'],
-            $row['entity_id'] ?: '-',
-            $row['delivery_id'] ?: '-'
-        ]);
-        $recordCount++;
-    }
-    fclose($fp);
-
-    Logger::info('Audit log export generated asynchronously', [
-        'export_id'        => $exportId,
-        'records_exported' => $recordCount,
-        'file_name'        => $filename,
-        'requested_by'     => $adminId,
-    ]);
-
-    // Notify requesting admin that export is ready
-    if ($adminId > 0) {
-        NotificationService::publish(
-            $db,
-            $adminId,
-            'admin.audit_export_ready',
-            'Audit Log Export Ready',
-            "Your audit report with {$recordCount} record(s) is ready: {$filename}",
-            null,
-            [
-                'export_id'    => $exportId,
-                'filename'     => $filename,
-                'record_count' => $recordCount,
-                'file_size'    => filesize($filepath),
-                'generated_at' => date('c'),
-            ]
-        );
-    }
+    throw new RuntimeException('Legacy audit export job is unsupported. Request a new authorized report export.');
 }
 
 /** Delete an obsolete private object; failures are retried by JobQueue. */
@@ -428,27 +380,8 @@ function handleStorageDelete(array $payload): void
  */
 function handleWebhookDelivery(array $payload): void
 {
-    $url  = $payload['target_url'] ?? '';
-    $data = $payload['data'] ?? [];
-
-    if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
-        return;
-    }
-
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => json_encode($data, JSON_UNESCAPED_SLASHES),
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'User-Agent: TweakInsight-Webhook/1.0'],
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 10,
-    ]);
-    $response = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    if ($code < 200 || $code >= 300) {
-        throw new RuntimeException("Webhook endpoint returned HTTP {$code}");
-    }
+    require_once __DIR__ . '/../helpers/webhook_dispatch.php';
+    WebhookDispatch::send($payload);
 }
 
 /**
@@ -456,6 +389,5 @@ function handleWebhookDelivery(array $payload): void
  */
 function handleGenericJob(array $job): void
 {
-    Logger::info('Handled generic queued job', ['job_id' => $job['id'], 'type' => $job['job_type']]);
+    throw new InvalidArgumentException('No handler registered for queue job type: ' . $job['job_type']);
 }
-

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { apiClient } from '../../api/client';
 import { showToast } from '../common/Toast';
 import { useAuth } from '../AuthContext';
+import { bookingRequest } from '../../utils/bookingRequest';
 
 const OUT_OF_AREA_REGEX = /\b(abuja|lagos|ibadan|kaduna|port harcourt|enugu|benin|ilorin|jos|maiduguri|sokoto|zaria|calabar|owerri|warri|asaba|aba)\b/i;
 
@@ -82,10 +83,15 @@ const BookDeliveryTab = ({ onCreated }) => {
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [createdTrackingNumber, setCreatedTrackingNumber] = useState('');
+    const submitting = useRef(false);
 
     const handleChange = (e) => {
         const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-        setForm(prev => ({ ...prev, [e.target.name]: value }));
+        const name = e.target.name;
+        setForm(prev => ({ ...prev, [name]: value,
+            ...(name === 'pickup_address' ? { pickup_lat: null, pickup_lng: null } : {}),
+            ...(name === 'delivery_address' ? { delivery_lat: null, delivery_lng: null } : {}),
+        }));
     };
 
     const appendLandmark = (field, landmark) => {
@@ -149,7 +155,7 @@ const BookDeliveryTab = ({ onCreated }) => {
                 delivery_lat: form.delivery_lat,
                 delivery_lng: form.delivery_lng,
                 package_size: selectedSize,
-                item_quantity: parseInt(form.item_quantity, 10) || 1,
+                item_quantity: Number(form.item_quantity),
                 is_fragile: form.is_fragile,
                 is_perishable: form.is_perishable,
             });
@@ -166,33 +172,38 @@ const BookDeliveryTab = ({ onCreated }) => {
     };
 
     const submitDelivery = async () => {
+        if (submitting.current) return;
+        submitting.current = true;
         setLoading(true);
         setMessage('');
         try {
             const payload = {
                 ...form,
                 package_size: selectedSize,
-                item_quantity: parseInt(form.item_quantity, 10) || 1,
+                item_quantity: Number(form.item_quantity),
                 pickup_latitude: form.pickup_lat,
                 pickup_longitude: form.pickup_lng,
                 delivery_latitude: form.delivery_lat,
                 delivery_longitude: form.delivery_lng,
-                ...(priceBreakdown || {}),
             };
 
-            const res = await apiClient.post('/deliveries/create', payload);
+            const attempt = await bookingRequest(user.id, payload);
+            const res = await apiClient.post('/deliveries/create', payload, { headers: { 'Idempotency-Key': attempt.key } });
             const createdDelivery = res.data.data;
+            if (!createdDelivery?.delivery_id) throw new Error('The booking response was incomplete. Retry to retrieve your booking.');
             const trackingNum = createdDelivery?.tracking_number || '';
             setCreatedTrackingNumber(trackingNum);
             const succMsg = `🎉 Delivery request created! Reference ID #${trackingNum}`;
             setMessage(succMsg);
             showToast.success(succMsg);
             setStep(4);
+            attempt.confirmed();
         } catch (err) {
-            const errMsg = err.response?.data?.message || 'Failed to submit request';
+            const errMsg = err.response?.data?.message || 'Booking could not be confirmed. Retry with the same details to safely retrieve or complete it.';
             setMessage(errMsg);
             showToast.error(errMsg);
         } finally {
+            submitting.current = false;
             setLoading(false);
         }
     };
@@ -581,10 +592,10 @@ const BookDeliveryTab = ({ onCreated }) => {
                 <div className="delivery-request-step">
                     <h5 className="fw-bold mb-2 d-flex align-items-center gap-2">
                         <span>💰</span>
-                        <span>Step 3: Confirm Delivery Price</span>
+                        <span>Step 3: Review Delivery Estimate</span>
                     </h5>
                     <p className="text-muted small mb-4">
-                        Review your delivery details and transparent price quote before dispatch.
+                        This is a provisional estimate based on your locations and package details. Operations must verify the route, weight and fare before payment is requested.
                     </p>
 
                     <div className="row g-4">
@@ -642,11 +653,11 @@ const BookDeliveryTab = ({ onCreated }) => {
                                 <div>
                                     <div className="d-flex justify-content-between align-items-center mb-3">
                                         <h6 className="fw-bold text-primary mb-0">Delivery Price Quote</h6>
-                                        <span className="badge bg-success-subtle text-success border border-success">All Inclusive</span>
+                                        <span className="badge bg-warning-subtle text-dark border">Provisional estimate</span>
                                     </div>
 
                                     <div className="text-center py-3 bg-light rounded border mb-3">
-                                        <span className="text-muted small d-block mb-1">Total Delivery Fare</span>
+                                        <span className="text-muted small d-block mb-1">Estimated Delivery Fare</span>
                                         <span className="display-6 fw-bold text-success">
                                             ₦{Number(priceBreakdown.total_cost || 0).toLocaleString()}
                                         </span>

@@ -9,7 +9,7 @@ import { triggerOtpSuccessHaptic, triggerActionTapHaptic } from '../../utils/hap
 const mapSearchUrl = address =>
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
-const SlideToConfirm = ({ onConfirm, disabled }) => {
+const SlideToConfirm = ({ onConfirm, disabled, pending }) => {
     const [value, setValue] = useState(0);
     const sent = useRef(false);
 
@@ -21,6 +21,7 @@ const SlideToConfirm = ({ onConfirm, disabled }) => {
     }, [disabled]);
 
     const change = event => {
+        if (disabled) return;
         const next = Number(event.target.value);
         setValue(next);
         if (next >= 92 && !sent.current) {
@@ -42,7 +43,7 @@ const SlideToConfirm = ({ onConfirm, disabled }) => {
                 aria-valuetext={value >= 92 ? 'Pickup confirmed' : 'Slide right to confirm pickup'}
             />
             <span className="driver-slide-confirm__label">
-                {disabled ? 'Confirming pickup…' : 'Slide to confirm pickup  →'}
+                {pending ? 'Confirming pickup…' : disabled ? 'Payment required before pickup' : 'Slide to confirm pickup  →'}
             </span>
         </label>
     );
@@ -102,25 +103,11 @@ const DeliveryStatusTimeline = ({ currentStatus }) => {
 
 const ProofOfDeliverySheet = ({ delivery, submitting, onClose, onSubmit }) => {
     const [otp, setOtp] = useState('');
-    const [recipientName, setRecipientName] = useState(delivery?.client_name || '');
-    const [signatureConfirmed, setSignatureConfirmed] = useState(true);
-    const [gpsCoords, setGpsCoords] = useState(null);
     const ref = useRef(null);
 
     useEffect(() => {
         ref.current?.focus();
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => setGpsCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-                () => setGpsCoords({ error: true })
-            );
-        }
     }, []);
-
-    const nowFormatted = new Date().toLocaleString('en-NG', { 
-        dateStyle: 'medium', 
-        timeStyle: 'short' 
-    });
 
     return (
         <div
@@ -176,45 +163,7 @@ const ProofOfDeliverySheet = ({ delivery, submitting, onClose, onSubmit }) => {
                     />
                 </div>
 
-                {/* 2. Recipient Confirmation & Details */}
-                <div className="mb-3">
-                    <label className="form-label small fw-semibold text-muted mb-1">
-                        👤 Recipient Confirmation Name
-                    </label>
-                    <input
-                        type="text"
-                        className="form-control form-control-sm"
-                        value={recipientName}
-                        onChange={e => setRecipientName(e.target.value)}
-                        placeholder="Recipient full name"
-                    />
-                </div>
-
-                {/* 3. Photo / Signature Confirmation Note */}
-                <div className="p-2 bg-light rounded border mb-3">
-                    <div className="form-check">
-                        <input
-                            type="checkbox"
-                            className="form-check-input"
-                            id="sigConfirmCheck"
-                            checked={signatureConfirmed}
-                            onChange={e => setSignatureConfirmed(e.target.checked)}
-                        />
-                        <label className="form-check-label small fw-semibold text-dark" htmlFor="sigConfirmCheck">
-                            ✍️ Recipient verified & goods handed over in good order
-                        </label>
-                    </div>
-                </div>
-
-                {/* 4. Timestamp & 5. GPS Confirmation Badges */}
-                <div className="d-flex justify-content-between align-items-center small text-muted bg-light p-2 rounded mb-3">
-                    <div>
-                        🕒 <strong>Time:</strong> {nowFormatted}
-                    </div>
-                    <div>
-                        📍 <strong>GPS:</strong> {gpsCoords?.lat ? `${gpsCoords.lat.toFixed(4)}°N, ${gpsCoords.lng.toFixed(4)}°E` : 'Kano Localized'}
-                    </div>
-                </div>
+                <p className="small text-muted">Confirm only after handing the package to the recipient. The confirmation time is recorded when verification succeeds.</p>
 
                 <button
                     className="btn btn-success driver-tap-target driver-action-btn w-100 fw-bold shadow-sm"
@@ -240,11 +189,8 @@ const ActiveDeliveriesTab = () => {
 
     const assignments = useQuery({
         queryKey: ['driver', 'active-assignments'],
-        queryFn: () => apiGet('/delivery-person/my-assignments?status=all'),
-        select: response =>
-            (response.data || []).filter(
-                item => item.status !== 'delivered' && item.status !== 'cancelled'
-            ),
+        queryFn: () => apiGet('/delivery-person/my-assignments?status=active'),
+        select: response => response.data || [],
     });
 
     const invalidate = () =>
@@ -266,7 +212,10 @@ const ActiveDeliveriesTab = () => {
             if (next === 'in_transit') startTracking(id);
             invalidate();
         },
-        onError: () => showToast.error('Failed to update status.'),
+        onError: error => {
+            showToast.error(error.response?.data?.message || 'Failed to update status. Refresh and try again.');
+            invalidate();
+        },
     });
 
     const location = useMutation({
@@ -461,13 +410,24 @@ const ActiveDeliveriesTab = () => {
                                 )}
 
                                 {item.status === 'driver_en_route' && (
-                                    <SlideToConfirm
-                                        disabled={busy(item.id)}
-                                        onConfirm={() => {
-                                            triggerActionTapHaptic();
-                                            status.mutate({ id: item.id, next: 'picked_up' });
-                                        }}
-                                    />
+                                    <>
+                                        {item.pickup_payment_verified !== true && (
+                                            <div className="alert alert-warning small mb-2" role="status">
+                                                <p className="mb-2">An approved fare and provider-verified payment are required. Do not collect the package; contact operations.</p>
+                                                <button type="button" className="btn btn-sm btn-outline-dark" disabled={assignments.isFetching} onClick={() => assignments.refetch()}>
+                                                    {assignments.isFetching ? 'Refreshing…' : 'Refresh payment status'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        <SlideToConfirm
+                                            pending={busy(item.id)}
+                                            disabled={busy(item.id) || item.pickup_payment_verified !== true}
+                                            onConfirm={() => {
+                                                triggerActionTapHaptic();
+                                                status.mutate({ id: item.id, next: 'picked_up' });
+                                            }}
+                                        />
+                                    </>
                                 )}
 
                                 {item.status === 'picked_up' && (
@@ -592,4 +552,3 @@ const ActiveDeliveriesTab = () => {
 };
 
 export default ActiveDeliveriesTab;
-

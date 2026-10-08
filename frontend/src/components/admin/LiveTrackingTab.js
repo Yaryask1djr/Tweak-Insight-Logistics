@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { apiGet } from '../../api/client';
 import LiveLocationMap from '../common/LiveLocationMap';
@@ -41,23 +41,24 @@ const LiveTrackingTab = () => {
         refetchInterval: 15_000,
     });
 
-    const items = locations.data?.pages.flatMap(page => page.data?.items || []) || [];
+    const items = useMemo(() => locations.data?.pages.flatMap(page => page.data?.items || []) || [], [locations.data]);
+    const { hasNextPage, isFetchingNextPage, fetchNextPage } = locations;
 
     useEffect(() => {
         const target = loadMoreRef.current;
-        if (!target || !locations.hasNextPage) return undefined;
+        if (!target || !hasNextPage) return undefined;
 
         const observer = new IntersectionObserver(
             entries => {
-                if (entries[0].isIntersecting && !locations.isFetchingNextPage) {
-                    locations.fetchNextPage();
+                if (entries[0].isIntersecting && !isFetchingNextPage) {
+                    fetchNextPage();
                 }
             },
             { rootMargin: '240px' }
         );
         observer.observe(target);
         return () => observer.disconnect();
-    }, [locations.hasNextPage, locations.isFetchingNextPage, locations.fetchNextPage]);
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     useEffect(() => {
         if (!items.some(item => item.delivery_id === selectedId)) {
@@ -125,7 +126,7 @@ const LiveTrackingTab = () => {
                                                         🛵 {item.driver_name || 'Driver pending'}
                                                     </small>
                                                     <span className={`badge ${isActive ? 'bg-white text-dark' : 'bg-success-subtle text-success border border-success-subtle'}`} style={{ fontSize: '0.68rem' }}>
-                                                        {item.status === 'in_transit' ? '⏱️ ETA ~15 min' : 'Active'}
+                                                        {item.status === 'in_transit' ? 'In transit' : 'Active'}
                                                     </span>
                                                 </div>
 
@@ -185,4 +186,3 @@ const LiveTrackingTab = () => {
 };
 
 export default LiveTrackingTab;
-

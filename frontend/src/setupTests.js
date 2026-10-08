@@ -1,2 +1,4 @@
-// Reserved for global Jest setup. Keep this file dependency-free so tests work
-// after a clean install without optional Testing Library packages.
+// Jest 27's jsdom lacks these platform APIs required by React Router 7.
+import { TextDecoder, TextEncoder } from 'util';
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;

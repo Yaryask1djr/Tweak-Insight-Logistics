@@ -14,16 +14,9 @@ const Pagination = ({ pagination, onPageChange, onLimitChange }) => {
         has_prev_page = false
     } = pagination;
 
-    if (total_pages <= 1 && total_records <= per_page) {
-        return (
-            <div className="d-flex justify-content-between align-items-center py-2 px-1 text-muted small">
-                <span>Showing {total_records} of {total_records} record{total_records !== 1 ? 's' : ''}</span>
-            </div>
-        );
-    }
-
-    const startRecord = Math.min((current_page - 1) * per_page + 1, total_records);
-    const endRecord = Math.min(current_page * per_page, total_records);
+    const outOfRange = current_page > total_pages;
+    const startRecord = outOfRange ? 0 : Math.min((current_page - 1) * per_page + 1, total_records);
+    const endRecord = outOfRange ? 0 : Math.min(current_page * per_page, total_records);
 
     // Calculate smart window of page numbers
     const getPageNumbers = () => {
@@ -67,6 +60,7 @@ const Pagination = ({ pagination, onPageChange, onLimitChange }) => {
                     <div className="d-inline-flex align-items-center gap-1">
                         <label className="text-muted small">Per page:</label>
                         <select
+                            aria-label="Records per page"
                             className="form-select form-select-sm"
                             style={{ width: 'auto', padding: '0.15rem 1.75rem 0.15rem 0.5rem', fontSize: '0.8rem' }}
                             value={per_page}
@@ -75,15 +69,17 @@ const Pagination = ({ pagination, onPageChange, onLimitChange }) => {
                             <option value={5}>5</option>
                             <option value={10}>10</option>
                             <option value={15}>15</option>
+                            <option value={20}>20</option>
                             <option value={25}>25</option>
                             <option value={50}>50</option>
+                            <option value={100}>100</option>
                         </select>
                     </div>
                 )}
             </div>
 
             {/* Pagination Controls */}
-            {total_pages > 1 && (
+            {(total_pages > 1 || outOfRange) && (
                 <nav aria-label="Page navigation">
                     <ul className="pagination pagination-sm mb-0">
                         {/* Prev button */}
@@ -113,6 +109,7 @@ const Pagination = ({ pagination, onPageChange, onLimitChange }) => {
                             <li key={p} className={`page-item ${p === current_page ? 'active' : ''}`}>
                                 <button
                                     className="page-link"
+                                    aria-current={p === current_page ? 'page' : undefined}
                                     onClick={() => onPageChange(p)}
                                     style={p === current_page ? { backgroundColor: 'var(--til-red, #dc2626)', borderColor: 'var(--til-red, #dc2626)' } : {}}
                                 >

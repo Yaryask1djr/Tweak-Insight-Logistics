@@ -1,0 +1,6 @@
+{
+  "runtime": "PHP 8.2.33 WebAssembly",
+  "method": "token_get_all with TOKEN_PARSE on every project PHP file, excluding vendor",
+  "parsed": 127,
+  "failures": []
+}

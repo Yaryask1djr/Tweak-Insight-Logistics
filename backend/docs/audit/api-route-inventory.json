@@ -1,0 +1,852 @@
+[
+  {
+    "line": 80,
+    "condition": "(in_array($path, ['/payments/paystack/webhook', '/payments/paystack/webhook/'], true) && $method === 'POST')",
+    "handlers": [
+      "PaymentController::handle"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 82,
+    "condition": "($path === '/deliveries/payment' && $method === 'GET')",
+    "handlers": [
+      "PaymentController::handle"
+    ],
+    "permissions": [
+      "payments.manage_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 85,
+    "condition": "($path === '/admin/deliveries/payment' && $method === 'GET')",
+    "handlers": [
+      "PaymentController::handle"
+    ],
+    "permissions": [
+      "operations.payments.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 88,
+    "condition": "($path === '/admin/deliveries/approve-fare' && $method === 'POST')",
+    "handlers": [
+      "PaymentController::handle"
+    ],
+    "permissions": [
+      "operations.fares.approve"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 91,
+    "condition": "($path === '/deliveries/payments/initialize' && $method === 'POST')",
+    "handlers": [
+      "PaymentController::handle"
+    ],
+    "permissions": [
+      "payments.manage_own"
+    ],
+    "rate_limit_buckets": [
+      "payment_initialize"
+    ]
+  },
+  {
+    "line": 95,
+    "condition": "($path === '/deliveries/payments/verify' && $method === 'POST')",
+    "handlers": [
+      "PaymentController::handle"
+    ],
+    "permissions": [
+      "payments.manage_own"
+    ],
+    "rate_limit_buckets": [
+      "payment_verify"
+    ]
+  },
+  {
+    "line": 102,
+    "condition": "($path === '/auth/register-client' && $method === 'POST')",
+    "handlers": [
+      "AuthController::registerClient"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": [
+      "register"
+    ]
+  },
+  {
+    "line": 107,
+    "condition": "($path === '/auth/register-delivery' && $method === 'POST')",
+    "handlers": [
+      "AuthController::registerDelivery"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": [
+      "register"
+    ]
+  },
+  {
+    "line": 112,
+    "condition": "($path === '/auth/login' && $method === 'POST')",
+    "handlers": [
+      "AuthController::login"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": [
+      "login"
+    ]
+  },
+  {
+    "line": 117,
+    "condition": "($path === '/auth/refresh' && $method === 'POST')",
+    "handlers": [
+      "AuthController::refresh"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": [
+      "refresh"
+    ]
+  },
+  {
+    "line": 122,
+    "condition": "($path === '/auth/me' && $method === 'GET')",
+    "handlers": [
+      "AuthController::me"
+    ],
+    "permissions": [
+      "account.read_self"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 128,
+    "condition": "($path === '/auth/logout' && $method === 'POST')",
+    "handlers": [
+      "AuthController::logout"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 134,
+    "condition": "($path === '/auth/change-password' && $method === 'POST')",
+    "handlers": [
+      "AuthController::changePassword"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 143,
+    "condition": "(($path === '/client/kyc/status' || $path === '/client/kyc') && $method === 'GET')",
+    "handlers": [
+      "ClientKycController::getKycStatus"
+    ],
+    "permissions": [
+      "kyc.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 149,
+    "condition": "(($path === '/client/kyc/documents/upload' || $path === '/client/kyc/submit') && $method === 'POST')",
+    "handlers": [
+      "ClientKycController::uploadDocument"
+    ],
+    "permissions": [
+      "kyc.submit_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 155,
+    "condition": "($path === '/client/kyc/documents/file' && $method === 'GET')",
+    "handlers": [
+      "ClientKycController::getDocumentFile"
+    ],
+    "permissions": [
+      "kyc.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 164,
+    "condition": "($path === '/deliveries/calculate-price' && $method === 'POST')",
+    "handlers": [
+      "DeliveryController::calculatePrice"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 168,
+    "condition": "($path === '/deliveries/track' && $method === 'GET')",
+    "handlers": [
+      "DeliveryController::trackDelivery"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": [
+      "public_tracking"
+    ]
+  },
+  {
+    "line": 173,
+    "condition": "($path === '/deliveries/live-location' && $method === 'GET')",
+    "handlers": [
+      "LiveTrackingController::delivery"
+    ],
+    "permissions": [
+      "tracking.live.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 176,
+    "condition": "($path === '/deliveries/live-location/stream' && $method === 'GET')",
+    "handlers": [
+      "LiveTrackingController::streamDeliveryLocation"
+    ],
+    "permissions": [
+      "tracking.live.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 179,
+    "condition": "($path === '/admin/live-tracking' && $method === 'GET')",
+    "handlers": [
+      "LiveTrackingController::activeForAdmin"
+    ],
+    "permissions": [
+      "operations.deliveries.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 182,
+    "condition": "($path === '/deliveries/confirm-receipt' && $method === 'POST')",
+    "handlers": [
+      "DeliveryController::confirmReceipt"
+    ],
+    "permissions": [
+      "driver.proof.confirm_assigned"
+    ],
+    "rate_limit_buckets": [
+      "otp_confirmation"
+    ]
+  },
+  {
+    "line": 189,
+    "condition": "($path === '/deliveries/create' && $method === 'POST')",
+    "handlers": [
+      "DeliveryController::createDelivery"
+    ],
+    "permissions": [
+      "delivery.request.create"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 195,
+    "condition": "($path === '/deliveries/payment-summary' && $method === 'GET')",
+    "handlers": [
+      "ReportingController::payments"
+    ],
+    "permissions": [
+      "delivery.request.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 197,
+    "condition": "($path === '/admin/reports/summary' && $method === 'GET')",
+    "handlers": [
+      "ReportingController::analytics"
+    ],
+    "permissions": [
+      "operations.audit.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 199,
+    "condition": "($path === '/admin/exceptions' && $method === 'GET')",
+    "handlers": [
+      "ReportingController::exceptions"
+    ],
+    "permissions": [
+      "operations.deliveries.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 202,
+    "condition": "(($path === '/deliveries/my-requests' || $path === '/deliveries/my-deliveries') && $method === 'GET')",
+    "handlers": [
+      "DeliveryController::getClientDeliveries"
+    ],
+    "permissions": [
+      "delivery.request.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 211,
+    "condition": "($path === '/notifications' && $method === 'GET')",
+    "handlers": [
+      "NotificationController::list"
+    ],
+    "permissions": [
+      "notifications.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 217,
+    "condition": "($path === '/notifications/unread-count' && $method === 'GET')",
+    "handlers": [
+      "NotificationController::unreadCount"
+    ],
+    "permissions": [
+      "notifications.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 223,
+    "condition": "($path === '/notifications/read' && $method === 'POST')",
+    "handlers": [
+      "NotificationController::markRead"
+    ],
+    "permissions": [
+      "notifications.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 229,
+    "condition": "($path === '/notifications/read-all' && $method === 'POST')",
+    "handlers": [
+      "NotificationController::markAllRead"
+    ],
+    "permissions": [
+      "notifications.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 238,
+    "condition": "($path === '/admin/client-kyc/pending' && $method === 'GET')",
+    "handlers": [
+      "AdminController::getPendingClientKyc"
+    ],
+    "permissions": [
+      "operations.clients.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 244,
+    "condition": "($path === '/admin/client-kyc/details' && $method === 'GET')",
+    "handlers": [
+      "AdminController::getClientKycDetails"
+    ],
+    "permissions": [
+      "operations.clients.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 250,
+    "condition": "($path === '/admin/client-kyc/approve' && $method === 'POST')",
+    "handlers": [
+      "AdminController::approveClientKyc"
+    ],
+    "permissions": [
+      "operations.clients.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 256,
+    "condition": "($path === '/admin/client-kyc/reject' && $method === 'POST')",
+    "handlers": [
+      "AdminController::rejectClientKyc"
+    ],
+    "permissions": [
+      "operations.clients.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 262,
+    "condition": "($path === '/admin/client-kyc/document-file' && $method === 'GET')",
+    "handlers": [
+      "AdminController::adminClientDocumentFile"
+    ],
+    "permissions": [
+      "operations.clients.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 268,
+    "condition": "($path === '/admin/pending-deliverymen' && $method === 'GET')",
+    "handlers": [
+      "AdminController::getPendingDeliverymen"
+    ],
+    "permissions": [
+      "operations.drivers.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 274,
+    "condition": "($path === '/admin/approve-deliveryman' && $method === 'POST')",
+    "handlers": [
+      "AdminController::approveDeliveryman"
+    ],
+    "permissions": [
+      "operations.drivers.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 283,
+    "condition": "($path === '/admin/reject-deliveryman' && $method === 'POST')",
+    "handlers": [
+      "AdminController::rejectDeliveryman"
+    ],
+    "permissions": [
+      "operations.drivers.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 293,
+    "condition": "($path === '/admin/review-driver-document' && $method === 'POST')",
+    "handlers": [
+      "AdminController::reviewDriverDocument"
+    ],
+    "permissions": [
+      "operations.drivers.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 296,
+    "condition": "($path === '/admin/pending-driver-documents' && $method === 'GET')",
+    "handlers": [
+      "AdminController::pendingDriverDocuments"
+    ],
+    "permissions": [
+      "operations.drivers.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 299,
+    "condition": "($path === '/admin/driver-document-file' && $method === 'GET')",
+    "handlers": [
+      "AdminController::driverDocumentFile"
+    ],
+    "permissions": [
+      "operations.drivers.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 302,
+    "condition": "($path === '/admin/release-assignment' && $method === 'POST')",
+    "handlers": [
+      "AdminController::releaseAssignment"
+    ],
+    "permissions": [
+      "operations.assignment.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 305,
+    "condition": "($path === '/admin/manual-assign' && $method === 'POST')",
+    "handlers": [
+      "AdminController::manualAssign"
+    ],
+    "permissions": [
+      "operations.assignment.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 308,
+    "condition": "($path === '/admin/audit-log' && $method === 'GET')",
+    "handlers": [
+      "AdminController::auditLog"
+    ],
+    "permissions": [
+      "operations.audit.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 311,
+    "condition": "(($path === '/admin/audit-log/export' || $path === '/admin/audit-logs/export') && $method === 'POST')",
+    "handlers": [
+      "ExportController::request"
+    ],
+    "permissions": [
+      "operations.audit.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 314,
+    "condition": "($path === '/admin/reports/deliveries/export' && $method === 'POST')",
+    "handlers": [
+      "ExportController::request"
+    ],
+    "permissions": [
+      "operations.audit.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 316,
+    "condition": "(($path === '/admin/exports/status' || $path === '/admin/exports/download') && $method === 'GET')",
+    "handlers": [
+      "ExportController::get"
+    ],
+    "permissions": [
+      "operations.audit.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 319,
+    "condition": "($path === '/admin/reports/deliveries' && $method === 'GET')",
+    "handlers": [
+      "AdminController::deliveryReport"
+    ],
+    "permissions": [
+      "operations.deliveries.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 322,
+    "condition": "($path === '/admin/drivers' && $method === 'GET')",
+    "handlers": [
+      "OperationsManagementController::drivers"
+    ],
+    "permissions": [
+      "operations.drivers.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 325,
+    "condition": "($path === '/admin/driver-operations' && $method === 'POST')",
+    "handlers": [
+      "OperationsManagementController::updateDriver"
+    ],
+    "permissions": [
+      "operations.drivers.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 328,
+    "condition": "($path === '/admin/rate-cards' && $method === 'GET')",
+    "handlers": [
+      "OperationsManagementController::rateCards"
+    ],
+    "permissions": [
+      "operations.rates.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 331,
+    "condition": "($path === '/admin/rate-cards' && $method === 'POST')",
+    "handlers": [
+      "OperationsManagementController::saveRateCard"
+    ],
+    "permissions": [
+      "operations.rates.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 334,
+    "condition": "($path === '/admin/business-accounts' && $method === 'GET')",
+    "handlers": [
+      "OperationsManagementController::businessAccounts"
+    ],
+    "permissions": [
+      "operations.business.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 337,
+    "condition": "($path === '/admin/business-accounts' && $method === 'POST')",
+    "handlers": [
+      "OperationsManagementController::saveBusinessAccount"
+    ],
+    "permissions": [
+      "operations.business.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 340,
+    "condition": "(($path === '/admin/users' || $path === '/admin/all-users') && $method === 'GET')",
+    "handlers": [
+      "AdminController::getAllUsers"
+    ],
+    "permissions": [
+      "operations.clients.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 346,
+    "condition": "(($path === '/admin/stats' || $path === '/admin/dashboard-stats') && $method === 'GET')",
+    "handlers": [
+      "AdminController::getDashboardStats"
+    ],
+    "permissions": [
+      "operations.dashboard.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 352,
+    "condition": "(($path === '/admin/deliveries' || $path === '/admin/all-deliveries') && $method === 'GET')",
+    "handlers": [
+      "AdminController::getAllDeliveries"
+    ],
+    "permissions": [
+      "operations.deliveries.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 358,
+    "condition": "($path === '/admin/broadcast-offer' && $method === 'POST')",
+    "handlers": [
+      "AdminController::broadcastDeliveryOffer"
+    ],
+    "permissions": [
+      "operations.assignment.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 364,
+    "condition": "($path === '/admin/review-delivery' && $method === 'POST')",
+    "handlers": [
+      "AdminController::reviewDeliveryRequest"
+    ],
+    "permissions": [
+      "operations.deliveries.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 367,
+    "condition": "($path === '/admin/complete-delivery' && $method === 'POST')",
+    "handlers": [
+      "AdminController::completeDelivery"
+    ],
+    "permissions": [
+      "operations.deliveries.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 370,
+    "condition": "($path === '/admin/resolve-delivery' && $method === 'POST')",
+    "handlers": [
+      "AdminController::resolveDelivery"
+    ],
+    "permissions": [
+      "operations.deliveries.manage"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 376,
+    "condition": "(($path === '/delivery/available' || $path === '/delivery-person/available-deliveries') && $method === 'GET')",
+    "handlers": [
+      "DeliveryPersonController::getAvailableOffers"
+    ],
+    "permissions": [
+      "driver.offer.read"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 382,
+    "condition": "(($path === '/delivery/operations-profile' || $path === '/delivery-person/operations-profile') && $method === 'GET')",
+    "handlers": [
+      "DriverOperationsController::profile"
+    ],
+    "permissions": [
+      "driver.profile.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 385,
+    "condition": "(($path === '/delivery/availability' || $path === '/delivery-person/availability') && $method === 'POST')",
+    "handlers": [
+      "DriverOperationsController::setAvailability"
+    ],
+    "permissions": [
+      "driver.availability.manage_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 388,
+    "condition": "(($path === '/delivery/operations-profile' || $path === '/delivery-person/operations-profile') && $method === 'POST')",
+    "handlers": [
+      "DriverOperationsController::updateProfile"
+    ],
+    "permissions": [
+      "driver.profile.manage_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 391,
+    "condition": "(($path === '/delivery/documents/upload' || $path === '/delivery-person/documents/upload') && $method === 'POST')",
+    "handlers": [
+      "DriverOperationsController::uploadDocument"
+    ],
+    "permissions": [
+      "driver.documents.manage_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 394,
+    "condition": "(($path === '/delivery/documents/file' || $path === '/delivery-person/documents/file') && $method === 'GET')",
+    "handlers": [
+      "DriverOperationsController::documentFile"
+    ],
+    "permissions": [
+      "driver.documents.manage_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 397,
+    "condition": "(($path === '/delivery/decline-offer' || $path === '/delivery-person/decline-offer') && $method === 'POST')",
+    "handlers": [
+      "DriverOperationsController::declineOffer"
+    ],
+    "permissions": [
+      "driver.offer.decline"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 400,
+    "condition": "(($path === '/delivery/report-issue' || $path === '/delivery-person/report-issue') && $method === 'POST')",
+    "handlers": [
+      "DriverOperationsController::reportAssignmentIssue"
+    ],
+    "permissions": [
+      "driver.assignment.report_issue"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 403,
+    "condition": "(($path === '/delivery/accept' || $path === '/delivery-person/accept-delivery') && $method === 'POST')",
+    "handlers": [
+      "DeliveryPersonController::acceptDeliveryOffer"
+    ],
+    "permissions": [
+      "driver.offer.accept"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 409,
+    "condition": "(($path === '/delivery/assignments' || $path === '/delivery-person/my-assignments') && $method === 'GET')",
+    "handlers": [
+      "DeliveryPersonController::getMyAssignments"
+    ],
+    "permissions": [
+      "driver.assignment.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 415,
+    "condition": "(($path === '/delivery/update-status' || $path === '/delivery-person/update-status') && $method === 'POST')",
+    "handlers": [
+      "DeliveryPersonController::updateDeliveryStatus"
+    ],
+    "permissions": [
+      "driver.assignment.update_status"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 421,
+    "condition": "(($path === '/delivery/location' || $path === '/delivery-person/update-location') && $method === 'POST')",
+    "handlers": [
+      "DeliveryPersonController::updateLocation"
+    ],
+    "permissions": [
+      "driver.assignment.update_location"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 427,
+    "condition": "(($path === '/delivery/earnings' || $path === '/delivery-person/my-earnings') && $method === 'GET')",
+    "handlers": [
+      "DeliveryPersonController::getMyEarnings"
+    ],
+    "permissions": [
+      "driver.earnings.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 433,
+    "condition": "(($path === '/delivery/earnings-summary' || $path === '/delivery-person/earnings-summary') && $method === 'GET')",
+    "handlers": [
+      "DeliveryPersonController::getEarningsSummary"
+    ],
+    "permissions": [
+      "driver.earnings.read_own"
+    ],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 439,
+    "condition": "(in_array($path, ['/', '/health', '/health/live'], true) && $method === 'GET')",
+    "handlers": [],
+    "permissions": [],
+    "rate_limit_buckets": []
+  },
+  {
+    "line": 441,
+    "condition": "($path === '/health/ready' && $method === 'GET')",
+    "handlers": [
+      "HealthController::check"
+    ],
+    "permissions": [],
+    "rate_limit_buckets": []
+  }
+]

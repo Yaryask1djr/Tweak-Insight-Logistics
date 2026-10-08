@@ -1,0 +1,735 @@
+[
+  {
+    "table": "users",
+    "references": [],
+    "indexes": [
+      "id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_users_role_approved (role, is_approved)",
+      "INDEX idx_users_role_approved_id (role, is_approved, id)",
+      "INDEX idx_users_account_status (account_status)"
+    ]
+  },
+  {
+    "table": "auth_refresh_sessions",
+    "references": [
+      [
+        "user_id",
+        "users",
+        "id",
+        "CASCADE"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_auth_refresh_sessions_token_hash (token_hash)",
+      "INDEX idx_auth_refresh_sessions_user_active (user_id, revoked_at, expires_at)",
+      "INDEX idx_auth_refresh_sessions_expiry (expires_at)",
+      "INDEX idx_auth_refresh_sessions_family (family_id)"
+    ]
+  },
+  {
+    "table": "service_zones",
+    "references": [],
+    "indexes": [
+      "id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_service_zones_name_city (name, city)",
+      "INDEX idx_service_zones_active (is_active, city)"
+    ]
+  },
+  {
+    "table": "hubs",
+    "references": [
+      [
+        "service_zone_id",
+        "service_zones",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_hubs_active_city (is_active, city)"
+    ]
+  },
+  {
+    "table": "clients",
+    "references": [
+      [
+        "user_id",
+        "users",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "kyc_reviewed_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_clients_user (user_id)",
+      "INDEX idx_clients_type (client_type)",
+      "INDEX idx_clients_kyc_status (kyc_status)"
+    ]
+  },
+  {
+    "table": "client_kyc_documents",
+    "references": [
+      [
+        "client_id",
+        "clients",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "reviewed_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_client_kyc_documents_type (client_id, document_type)",
+      "INDEX idx_client_kyc_documents_review (client_id, verification_status)",
+      "INDEX idx_client_kyc_documents_expiry (expires_at)",
+      "INDEX idx_client_kyc_documents_retention (retention_until)"
+    ]
+  },
+  {
+    "table": "business_accounts",
+    "references": [
+      [
+        "owner_client_id",
+        "clients",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_business_accounts_status (account_status)"
+    ]
+  },
+  {
+    "table": "client_addresses",
+    "references": [
+      [
+        "client_id",
+        "clients",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "service_zone_id",
+        "service_zones",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_client_addresses_client (client_id)",
+      "INDEX idx_client_addresses_service_area (city, state, service_zone_id)"
+    ]
+  },
+  {
+    "table": "drivers",
+    "references": [
+      [
+        "user_id",
+        "users",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "kyc_reviewed_by",
+        "users",
+        "id",
+        "SET NULL"
+      ],
+      [
+        "base_service_zone_id",
+        "service_zones",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_drivers_user (user_id)",
+      "UNIQUE KEY uq_drivers_vehicle_registration (vehicle_registration)",
+      "INDEX idx_drivers_kyc_status (kyc_status, active_status)"
+    ]
+  },
+  {
+    "table": "driver_documents",
+    "references": [
+      [
+        "driver_id",
+        "drivers",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "reviewed_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_driver_documents_review (driver_id, verification_status)",
+      "INDEX idx_driver_documents_expiry (expires_at)",
+      "INDEX idx_driver_documents_retention (retention_until)"
+    ]
+  },
+  {
+    "table": "driver_availability",
+    "references": [
+      [
+        "driver_id",
+        "drivers",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "service_zone_id",
+        "service_zones",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "driver_id INT UNSIGNED PRIMARY KEY",
+      "INDEX idx_driver_availability_dispatch (availability_status, service_zone_id, updated_at)"
+    ]
+  },
+  {
+    "table": "rate_cards",
+    "references": [
+      [
+        "business_account_id",
+        "business_accounts",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "created_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_rate_cards_lookup (city, service_type, is_active, effective_from)",
+      "INDEX idx_rate_cards_business (business_account_id, is_active)"
+    ]
+  },
+  {
+    "table": "rate_rules",
+    "references": [
+      [
+        "rate_card_id",
+        "rate_cards",
+        "id",
+        "CASCADE"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_rate_rules_card_code (rate_card_id, rule_code)",
+      "INDEX idx_rate_rules_card_order (rate_card_id, sort_order)"
+    ]
+  },
+  {
+    "table": "deliveries",
+    "references": [
+      [
+        "client_id",
+        "users",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "delivery_person_id",
+        "users",
+        "id",
+        "SET NULL"
+      ],
+      [
+        "business_account_id",
+        "business_accounts",
+        "id",
+        "SET NULL"
+      ],
+      [
+        "pickup_hub_id",
+        "hubs",
+        "id",
+        "SET NULL"
+      ],
+      [
+        "delivery_hub_id",
+        "hubs",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_deliveries_status (status)",
+      "INDEX idx_deliveries_client_status (client_id, status)",
+      "INDEX idx_deliveries_client_time (client_id, request_time)",
+      "INDEX idx_deliveries_client_status_time (client_id, status, request_time)",
+      "INDEX idx_deliveries_client_status_id (client_id, status, id)",
+      "INDEX idx_deliveries_driver_status (delivery_person_id, status)",
+      "INDEX idx_deliveries_driver_time (delivery_person_id, request_time)",
+      "INDEX idx_deliveries_driver_status_time (delivery_person_id, status, request_time)",
+      "INDEX idx_deliveries_driver_status_id (delivery_person_id, status, id)",
+      "INDEX idx_deliveries_status_time (status, request_time)",
+      "INDEX idx_deliveries_status_id (status, id)",
+      "INDEX idx_deliveries_offer_lookup (status, delivery_person_id, pickup_city, delivery_city, request_time)",
+      "INDEX idx_deliveries_service_area (pickup_city, delivery_city, status)",
+      "INDEX idx_deliveries_request_time (request_time)",
+      "INDEX idx_deliveries_payment_status (payment_status)"
+    ]
+  },
+  {
+    "table": "booking_requests",
+    "references": [
+      [
+        "client_id",
+        "users",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_booking_request_scope (client_id, operation, key_hash)",
+      "UNIQUE KEY uq_booking_request_delivery (delivery_id)"
+    ]
+  },
+  {
+    "table": "delivery_booking_snapshots",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "delivery_id BIGINT UNSIGNED PRIMARY KEY"
+    ]
+  },
+  {
+    "table": "booking_outbox",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_booking_outbox_event (delivery_id, event_type)",
+      "INDEX idx_booking_outbox_due (status, available_at, id)"
+    ]
+  },
+  {
+    "table": "delivery_items",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_delivery_items_delivery (delivery_id)"
+    ]
+  },
+  {
+    "table": "delivery_price_quotes",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "rate_card_id",
+        "rate_cards",
+        "id",
+        "SET NULL"
+      ],
+      [
+        "calculated_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_delivery_price_quotes_delivery_status (delivery_id, quote_status)",
+      "INDEX idx_delivery_price_quotes_expiry (expires_at)"
+    ]
+  },
+  {
+    "table": "delivery_fare_approvals",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "approved_by",
+        "users",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_delivery_fare_version (delivery_id, version)"
+    ]
+  },
+  {
+    "table": "delivery_payment_attempts",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "client_id",
+        "users",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "fare_approval_id",
+        "delivery_fare_approvals",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY",
+      "UNIQUE KEY uq_payment_fare_environment (fare_approval_id, environment)",
+      "INDEX idx_payment_delivery (delivery_id, created_at)"
+    ]
+  },
+  {
+    "table": "delivery_payment_receipts",
+    "references": [
+      [
+        "attempt_id",
+        "delivery_payment_attempts",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "fare_approval_id",
+        "delivery_fare_approvals",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "client_id",
+        "users",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_provider_transaction (provider, environment, provider_transaction_id)",
+      "INDEX idx_receipt_delivery (delivery_id, verified_at)"
+    ]
+  },
+  {
+    "table": "payment_webhook_events",
+    "references": [
+      [
+        "attempt_id",
+        "delivery_payment_attempts",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_payment_webhook_due (status, available_at, id)"
+    ]
+  },
+  {
+    "table": "delivery_driver_offers",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "driver_id",
+        "drivers",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "offered_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_driver_offers_delivery_driver (delivery_id, driver_id)",
+      "INDEX idx_driver_offers_inbox (driver_id, offer_status, expires_at)",
+      "INDEX idx_driver_offers_delivery (delivery_id, offer_status)"
+    ]
+  },
+  {
+    "table": "delivery_assignments",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "driver_id",
+        "drivers",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "accepted_offer_id",
+        "delivery_driver_offers",
+        "id",
+        "SET NULL"
+      ],
+      [
+        "assigned_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_assignments_delivery_sequence (delivery_id, assignment_sequence)",
+      "INDEX idx_assignments_delivery_current (delivery_id, is_current)",
+      "INDEX idx_assignments_driver_status (driver_id, assignment_status, assigned_at)"
+    ]
+  },
+  {
+    "table": "delivery_status_history",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "changed_by_user_id",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_status_history_delivery_time (delivery_id, created_at)",
+      "INDEX idx_status_history_status (to_status, created_at)"
+    ]
+  },
+  {
+    "table": "delivery_location_events",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "delivery_person_id",
+        "users",
+        "id",
+        "CASCADE"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_location_events_delivery_time (delivery_id, recorded_at)",
+      "INDEX idx_location_events_delivery_id (delivery_id, id)",
+      "INDEX idx_location_events_driver_time (delivery_person_id, recorded_at)"
+    ]
+  },
+  {
+    "table": "delivery_proofs",
+    "references": [
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "captured_by_driver_id",
+        "drivers",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "verified_by",
+        "users",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_delivery_proofs_delivery (delivery_id, proof_type)",
+      "INDEX idx_delivery_proofs_verification (verification_status, captured_at)"
+    ]
+  },
+  {
+    "table": "delivery_earnings",
+    "references": [
+      [
+        "delivery_person_id",
+        "users",
+        "id",
+        "RESTRICT"
+      ],
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "UNIQUE KEY uq_earnings_delivery_fee (delivery_id, earning_type)",
+      "INDEX idx_earnings_driver_status (delivery_person_id, status)",
+      "INDEX idx_earnings_status (status)"
+    ]
+  },
+  {
+    "table": "notifications",
+    "references": [
+      [
+        "user_id",
+        "users",
+        "id",
+        "CASCADE"
+      ],
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "CASCADE"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_notifications_inbox (user_id, delivery_status, created_at)",
+      "INDEX idx_notifications_delivery (delivery_id, created_at)"
+    ]
+  },
+  {
+    "table": "audit_logs",
+    "references": [
+      [
+        "actor_user_id",
+        "users",
+        "id",
+        "SET NULL"
+      ],
+      [
+        "delivery_id",
+        "deliveries",
+        "id",
+        "SET NULL"
+      ]
+    ],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_audit_logs_entity (entity_type, entity_id, created_at)",
+      "INDEX idx_audit_logs_delivery (delivery_id, created_at)",
+      "INDEX idx_audit_logs_actor (actor_user_id, created_at)",
+      "INDEX idx_audit_logs_action_time (action, created_at)"
+    ]
+  },
+  {
+    "table": "rate_limit_buckets",
+    "references": [],
+    "indexes": [
+      "rate_key CHAR(64) NOT NULL PRIMARY KEY",
+      "INDEX idx_rate_limit_bucket_expiry (window_expires_at)"
+    ]
+  },
+  {
+    "table": "report_exports",
+    "references": [
+      [
+        "owner_user_id",
+        "users",
+        "id",
+        "RESTRICT"
+      ]
+    ],
+    "indexes": [
+      "id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY",
+      "INDEX idx_report_export_work (status, reserved_until, created_at)",
+      "INDEX idx_report_export_expiry (expires_at)",
+      "INDEX idx_report_export_owner (owner_user_id, created_at)"
+    ]
+  },
+  {
+    "table": "job_queue",
+    "references": [],
+    "indexes": [
+      "id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY",
+      "INDEX idx_job_status_available (queue_name, status, available_at)",
+      "INDEX idx_job_reservation_expiry (queue_name, status, reserved_until)"
+    ]
+  }
+]

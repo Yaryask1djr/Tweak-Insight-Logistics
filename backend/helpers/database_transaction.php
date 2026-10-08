@@ -54,8 +54,13 @@ final class DatabaseTransaction
      * @return T The value returned by $action
      * @throws Throwable
      */
-    public static function run(PDO $db, callable $action, int $maxAttempts = self::DEFAULT_MAX_ATTEMPTS): mixed
+    public static function run(PDO $db, callable $action, int $maxAttempts = self::DEFAULT_MAX_ATTEMPTS, bool $respondToBusinessErrors = true): mixed
     {
+        // This helper owns its transaction; never commit or roll back a caller's work.
+        if ($db->inTransaction()) {
+            throw new LogicException('Nested DatabaseTransaction::run calls are not supported.');
+        }
+        if ($maxAttempts < 1) throw new InvalidArgumentException('maxAttempts must be positive.');
         $attempt = 0;
 
         while (true) {
@@ -80,6 +85,7 @@ final class DatabaseTransaction
                     } catch (Throwable $rollbackException) {
                     }
                 }
+                if (!$respondToBusinessErrors) throw $businessException;
                 Response::error($businessException->getMessage(), $businessException->getStatusCode());
             } catch (Throwable $exception) {
                 if ($db->inTransaction()) {
