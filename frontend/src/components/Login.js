@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { apiClient } from '../api/client';
+import { safeReturnPath } from '../utils/safeReturnPath';
 import logoWebp from '../assets/logo.webp';
 import logoPng from '../assets/logo.png';
 
@@ -19,7 +20,7 @@ const Login = () => {
     const location = useLocation();
 
     const searchParams = new URLSearchParams(location.search);
-    const redirectPath = searchParams.get('redirect');
+    const redirectPath = safeReturnPath(searchParams.get('redirect'));
     const errors = {
         email: validators.email(email),
         password: validators.requiredPassword(password),

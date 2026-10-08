@@ -5,10 +5,10 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/helpers/security_headers.php';
 SecurityHeaders::send();
 
-// This file is intentionally minimal. Apache serves index.html for SPA routes
-// through .htaccess; the fallback prevents accidental PHP source disclosure if
-// a host resolves the directory index through PHP first.
-$index = __DIR__ . '/index.html';
+// Apache sends SPA routes here so each navigation reads the active release
+// pointer. Legacy index.html remains available only before the first activation.
+require_once dirname(__DIR__) . '/helpers/frontend_release.php';
+$index = FrontendRelease::index(__DIR__);
 
 if (!is_file($index)) {
     http_response_code(503);

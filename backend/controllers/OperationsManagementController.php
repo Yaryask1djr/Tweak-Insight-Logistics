@@ -4,6 +4,7 @@ require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/operations_schema.php';
 require_once __DIR__ . '/../helpers/operational_records.php';
 require_once __DIR__ . '/../helpers/notification_service.php';
+require_once __DIR__ . '/../helpers/listing_query.php';
 
 /** Deeper operations records: fleet, rate cards, business accounts, and dispatch exceptions. */
 final class OperationsManagementController
@@ -14,18 +15,29 @@ final class OperationsManagementController
     public static function drivers(PDO $db): void
     {
         OperationsSchema::requireTables($db, ['drivers', 'driver_availability']);
-        [$page, $limit, $offset] = self::page();
-        $filter = trim($_GET['status'] ?? 'all');
-        $allowed = ['all', 'active', 'inactive', 'suspended', 'verified', 'submitted', 'rejected'];
-        if (!in_array($filter, $allowed, true)) Response::error('Unsupported driver status filter.');
-        $where = "WHERE u.role = 'delivery'"; $params = [];
-        if (in_array($filter, ['active', 'inactive', 'suspended'], true)) { $where .= ' AND d.active_status = :status'; $params['status'] = $filter; }
-        if (in_array($filter, ['verified', 'submitted', 'rejected'], true)) { $where .= ' AND d.kyc_status = :status'; $params['status'] = $filter; }
-        $count = $db->prepare("SELECT COUNT(*) FROM users u JOIN drivers d ON d.user_id = u.id {$where}"); $count->execute($params); $total = (int)$count->fetchColumn();
-        $statement = $db->prepare("SELECT u.id AS user_id, u.full_name, u.email, u.phone, u.is_approved, u.account_status, d.id AS driver_id, d.kyc_status, d.active_status, d.vehicle_type, d.vehicle_registration, d.max_payload_kg, a.availability_status, a.last_location_at FROM users u JOIN drivers d ON d.user_id = u.id LEFT JOIN driver_availability a ON a.driver_id = d.id {$where} ORDER BY u.created_at DESC LIMIT :limit OFFSET :offset");
+        try {
+            [$page, $limit, $offset] = ListingQuery::page($_GET);
+            $search = ListingQuery::search($_GET);
+            $order = ListingQuery::order($_GET, ['newest' => 'u.id DESC', 'name' => 'u.full_name ASC, u.id ASC'], 'newest');
+        } catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        $where = ["u.role = 'delivery'"]; $params = [];
+        $status = $_GET['status'] ?? 'all'; $availability = $_GET['availability'] ?? 'all';
+        if (!in_array($status, ['all','active','inactive','suspended','verified','submitted','rejected'], true)) Response::error('Invalid driver status.', 422);
+        if ($status !== 'all') { $where[] = in_array($status, ['active','inactive','suspended'], true) ? 'd.active_status = :status' : 'd.kyc_status = :status'; $params['status'] = $status; }
+        if (!in_array($availability, ['all','available','busy','offline','paused'], true)) Response::error('Invalid availability.', 422);
+        if ($availability !== 'all') { $where[] = "COALESCE(a.availability_status, 'offline') = :availability"; $params['availability'] = $availability; }
+        if ($search !== '') {
+            $where[] = '(u.full_name LIKE :name OR u.phone LIKE :phone OR d.vehicle_type LIKE :vehicle OR d.vehicle_registration LIKE :registration)';
+            foreach (['name','phone','vehicle','registration'] as $key) $params[$key] = '%' . $search . '%';
+        }
+        $join = 'FROM users u JOIN drivers d ON d.user_id = u.id LEFT JOIN driver_availability a ON a.driver_id = d.id';
+        $filter = 'WHERE ' . implode(' AND ', $where);
+        $count = $db->prepare("SELECT COUNT(*) {$join} {$filter}"); $count->execute($params); $total = (int)$count->fetchColumn();
+        $statement = $db->prepare("SELECT u.id AS user_id, u.full_name, u.email, u.phone, u.is_approved, u.account_status, d.id AS driver_id, d.kyc_status, d.active_status, d.vehicle_type, d.vehicle_registration, d.max_payload_kg, a.availability_status, a.last_location_at {$join} {$filter} ORDER BY {$order} LIMIT :limit OFFSET :offset");
         foreach ($params as $key => $value) $statement->bindValue(':' . $key, $value);
         $statement->bindValue(':limit', $limit, PDO::PARAM_INT); $statement->bindValue(':offset', $offset, PDO::PARAM_INT); $statement->execute();
-        Response::paginated($statement->fetchAll(PDO::FETCH_ASSOC), $total, $page, $limit, 'Fleet records retrieved.');
+        $counts = $db->query("SELECT COUNT(*) AS total, COALESCE(SUM(a.availability_status = 'available'),0) AS available, COALESCE(SUM(a.availability_status = 'busy'),0) AS busy, COALESCE(SUM(COALESCE(a.availability_status,'offline') = 'offline'),0) AS offline {$join} WHERE u.role = 'delivery'")->fetch(PDO::FETCH_ASSOC);
+        Response::paginated($statement->fetchAll(PDO::FETCH_ASSOC), $total, $page, $limit, 'Fleet records retrieved.', 200, ['counts' => array_map('intval', $counts)]);
     }
 
     public static function updateDriver(PDO $db, int $adminId): void
@@ -51,11 +63,27 @@ final class OperationsManagementController
     public static function rateCards(PDO $db): void
     {
         OperationsSchema::requireTables($db, ['rate_cards', 'rate_rules']);
-        $statement = $db->query("SELECT r.*, u.full_name AS created_by_name FROM rate_cards r LEFT JOIN users u ON u.id = r.created_by WHERE r.city = 'Kano' ORDER BY r.is_active DESC, r.effective_from DESC");
-        $cards = $statement->fetchAll(PDO::FETCH_ASSOC);
-        $rules = $db->query('SELECT rate_card_id, rule_code, amount, threshold_value, sort_order FROM rate_rules ORDER BY sort_order, id')->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($cards as &$card) { $card['rules'] = array_values(array_filter($rules, fn ($rule) => (int)$rule['rate_card_id'] === (int)$card['id'])); }
-        Response::json($cards, 'Kano rate cards retrieved.');
+        try {
+            [$page, $limit, $offset] = ListingQuery::page($_GET);
+            $search = ListingQuery::search($_GET);
+            $order = ListingQuery::order($_GET, ['newest' => 'r.id DESC', 'name' => 'r.name ASC, r.id ASC'], 'newest');
+        } catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        $where = "r.city = 'Kano'"; $params = [];
+        if ($search !== '') { $where .= ' AND r.name LIKE :search'; $params['search'] = '%' . $search . '%'; }
+        $count = $db->prepare("SELECT COUNT(*) FROM rate_cards r WHERE {$where}"); $count->execute($params);
+        $total = (int)$count->fetchColumn();
+        $statement = $db->prepare("SELECT r.*, u.full_name AS created_by_name FROM rate_cards r LEFT JOIN users u ON u.id = r.created_by WHERE {$where} ORDER BY {$order} LIMIT :limit OFFSET :offset");
+        foreach ($params as $key => $value) $statement->bindValue(':' . $key, $value);
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT); $statement->bindValue(':offset', $offset, PDO::PARAM_INT); $statement->execute();
+        $cards = $statement->fetchAll(PDO::FETCH_ASSOC); $rules = [];
+        if ($cards) {
+            $ids = array_column($cards, 'id');
+            $stmt = $db->prepare('SELECT rate_card_id, rule_code, amount, threshold_value, sort_order FROM rate_rules WHERE rate_card_id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY sort_order, id');
+            $stmt->execute($ids);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $rule) $rules[$rule['rate_card_id']][] = $rule;
+        }
+        foreach ($cards as &$card) $card['rules'] = $rules[$card['id']] ?? [];
+        Response::paginated($cards, $total, $page, $limit, 'Kano rate cards retrieved.');
     }
 
     public static function saveRateCard(PDO $db, int $adminId): void
@@ -66,9 +94,18 @@ final class OperationsManagementController
         $name = trim((string)($data->name ?? '')); if ($name === '') Response::error('Rate card name is required.');
         $rules = is_array($data->rules ?? null) ? $data->rules : [];
         if (!$rules) Response::error('At least one rate rule is required.');
+        if (count($rules) > count(self::RULE_CODES) || mb_strlen($name) > 150) Response::error('Rate card exceeds supported name/rule bounds.', 422);
+        $codes = [];
         foreach ($rules as $rule) {
             $value = is_array($rule) ? $rule : (array)$rule;
             if (!in_array($value['rule_code'] ?? '', self::RULE_CODES, true)) Response::error('Unsupported rate rule.');
+            $code = $value['rule_code'];
+            if (isset($codes[$code])) Response::error('Duplicate rate rule.', 422);
+            $codes[$code] = true;
+            $amount = $value['amount'] ?? null;
+            $threshold = $value['threshold_value'] ?? null;
+            if ((!is_int($amount) && !is_float($amount)) || !is_finite((float)$amount) || $amount < 0 || $amount > 10000000) Response::error('Rate amounts must be numeric and between 0 and 10,000,000.', 422);
+            if ($threshold !== null && $threshold !== '' && ((!is_int($threshold) && !is_float($threshold)) || !is_finite((float)$threshold) || $threshold < 0 || $threshold > 1000)) Response::error('Rate thresholds must be numeric and between 0 and 1,000.', 422);
         }
         $id = (int)($data->id ?? 0); $effective = $data->effective_from ?? date('Y-m-d H:i:s'); $active = !empty($data->is_active) ? 1 : 0;
         $db->beginTransaction();
@@ -85,8 +122,8 @@ final class OperationsManagementController
             foreach ($rules as $position => $rule) { $value = is_array($rule) ? $rule : (array)$rule; $insertRule->execute([$id, $value['rule_code'], max(0, (float)($value['amount'] ?? 0)), isset($value['threshold_value']) && $value['threshold_value'] !== '' ? (float)$value['threshold_value'] : null, $position]); }
             $db->commit();
         } catch (Throwable $exception) { if ($db->inTransaction()) $db->rollBack(); throw $exception; }
-        OperationalRecords::audit($db, $adminId, 'admin', $data->id ? 'rate_card.updated' : 'rate_card.created', 'rate_card', $id, null, ['service_type' => $service, 'active' => (bool)$active]);
-        Response::json(['id' => $id], 'Rate card saved. It applies only to future quotes once the pricing engine is switched to rate cards.');
+        OperationalRecords::audit($db, $adminId, 'admin', !empty($data->id) ? 'rate_card.updated' : 'rate_card.created', 'rate_card', $id, null, ['service_type' => $service, 'active' => (bool)$active]);
+        Response::json(['id' => $id], 'Rate card saved for future delivery quotes.');
     }
 
     public static function businessAccounts(PDO $db): void
@@ -110,7 +147,7 @@ final class OperationsManagementController
             $ownerUserId = (int)($data->owner_user_id ?? 0); $client = $db->prepare('SELECT id FROM clients WHERE user_id = ?'); $client->execute([$ownerUserId]); $clientId = (int)$client->fetchColumn(); if (!$clientId) Response::error('owner_user_id must belong to a client account.');
             $insert = $db->prepare('INSERT INTO business_accounts (owner_client_id, legal_name, trading_name, contact_email, contact_phone, account_status, credit_limit, payment_terms_days) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'); $insert->execute([$clientId, trim((string)$data->legal_name), trim((string)($data->trading_name ?? '')) ?: null, trim((string)($data->contact_email ?? '')) ?: null, trim((string)($data->contact_phone ?? '')) ?: null, $status, max(0, (float)($data->credit_limit ?? 0)), max(0, (int)($data->payment_terms_days ?? 0))]); $id = (int)$db->lastInsertId();
         }
-        OperationalRecords::audit($db, $adminId, 'admin', $data->id ? 'business_account.updated' : 'business_account.created', 'business_account', $id, null, ['account_status' => $status]);
+        OperationalRecords::audit($db, $adminId, 'admin', !empty($data->id) ? 'business_account.updated' : 'business_account.created', 'business_account', $id, null, ['account_status' => $status]);
         Response::json(['id' => $id], 'Business account saved.');
     }
 

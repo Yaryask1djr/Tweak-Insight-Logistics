@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Icon from '../common/Icon';
 
 const ClientOverviewTab = ({
     user,
@@ -23,10 +22,6 @@ const ClientOverviewTab = ({
     const deliveredDeliveries = deliveries.filter(d =>
         ['delivered', 'completed'].includes(d.status)
     );
-    const cancelledDeliveries = deliveries.filter(d =>
-        ['cancelled', 'rejected', 'failed'].includes(d.status)
-    );
-
     const totalSpend = deliveries.reduce((acc, d) => acc + (Number(d.total_cost) || 0), 0);
     const mostRecentActive = activeDeliveries[0] || null;
     const recentDeliveries = deliveries.slice(0, 5);

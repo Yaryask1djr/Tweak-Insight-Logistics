@@ -2,6 +2,20 @@
 
 class TrackerHelper
 {
+    /** Public references reveal shipment progress, never contacts, cargo, notes, or internal fields. */
+    public static function publicView(array $delivery): array
+    {
+        $result = array_intersect_key($delivery, array_flip([
+            'tracking_number', 'status', 'service_type', 'pickup_city', 'delivery_city',
+            'request_time', 'pickup_time', 'delivery_time', 'tracking_started_at',
+            'assigned_at', 'picked_up_at', 'in_transit_at', 'delivered_at',
+        ]));
+        $result['pickup_address'] = $delivery['pickup_city'] ?? 'Kano';
+        $result['delivery_address'] = $delivery['delivery_city'] ?? 'Kano';
+        $result['is_verified_viewer'] = false;
+        return $result;
+    }
+
     /**
      * Generates a high-entropy tracking reference: TIL-2026-X8K9-M4PQ
      * Uses cryptographically secure random alphanumeric characters (unambiguous base32 charset).

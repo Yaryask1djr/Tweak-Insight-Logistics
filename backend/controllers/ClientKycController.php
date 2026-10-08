@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../helpers/response.php';
+require_once __DIR__ . '/../helpers/kyc_workflow.php';
 require_once __DIR__ . '/../helpers/operations_schema.php';
 require_once __DIR__ . '/../helpers/operational_records.php';
 require_once __DIR__ . '/../helpers/notification_service.php';
@@ -49,17 +50,11 @@ final class ClientKycController
         } catch (UploadSecurityException $exception) {
             Response::error($exception->getMessage(), $exception->httpStatus());
         }
+        try { $metadata = KycWorkflow::uploadMetadata($_POST); }
+        catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
         $file = $_FILES['document'];
         $mime = $upload['mime'];
 
-        $expiresAt = trim((string)($_POST['expires_at'] ?? '')) ?: null;
-        if ($expiresAt !== null) {
-            $date = DateTimeImmutable::createFromFormat('!Y-m-d', $expiresAt);
-            if (!$date || $date->format('Y-m-d') !== $expiresAt || $date < new DateTimeImmutable('today')) {
-                Response::error('Expiry date must be today or later in YYYY-MM-DD format.', 422);
-            }
-        }
-        $documentNumber = trim((string)($_POST['document_number'] ?? '')) ?: null;
 
         $status = $db->prepare('SELECT kyc_status FROM clients WHERE id = ?');
         $status->execute([$clientId]);
@@ -88,24 +83,15 @@ final class ClientKycController
         }
 
         try {
-            $db->beginTransaction();
-            $existing = $db->prepare('SELECT id, storage_key FROM client_kyc_documents WHERE client_id = ? AND document_type = ? FOR UPDATE');
-            $existing->execute([$clientId, $documentType]);
-            $previous = $existing->fetch(PDO::FETCH_ASSOC);
-            if ($previous) {
-                $update = $db->prepare("UPDATE client_kyc_documents SET storage_key = ?, document_number = ?, expires_at = ?, retention_until = ?, verification_status = 'pending', rejection_reason = NULL, reviewed_by = NULL, reviewed_at = NULL WHERE id = ?");
-                $update->execute([$storageKey, $documentNumber, $expiresAt, $retentionUntil, $previous['id']]);
-                $documentId = (int)$previous['id'];
-            } else {
-                $insert = $db->prepare("INSERT INTO client_kyc_documents (client_id, document_type, document_number, storage_key, expires_at, retention_until, verification_status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
-                $insert->execute([$clientId, $documentType, $documentNumber, $storageKey, $expiresAt, $retentionUntil]);
-                $documentId = (int)$db->lastInsertId();
-            }
-            $db->prepare("UPDATE clients SET kyc_status = 'submitted', kyc_rejection_reason = NULL, kyc_reviewed_by = NULL, kyc_reviewed_at = NULL WHERE id = ?")->execute([$clientId]);
-            $db->commit();
+            $result = KycWorkflow::recordUpload($db, $userId, 'client', $documentType, $storageKey, $metadata, $retentionUntil);
+            $documentId = $result['document_id'];
+            $previous = ['storage_key' => $result['previous_storage_key']];
         } catch (Throwable $exception) {
             if ($db->inTransaction()) $db->rollBack();
-            Storage::adapter()->delete($storageKey);
+            try { Storage::adapter()->delete($storageKey); }
+            catch (Throwable $cleanup) { Logger::error('Uncommitted KYC object cleanup failed.'); }
+            if ($exception instanceof TransactionBusinessException) Response::error($exception->getMessage(), $exception->getStatusCode());
+            Logger::exception($exception, 'Client KYC metadata could not be saved');
             Response::serverError('Unable to save the KYC document submission.');
         }
 
@@ -124,7 +110,6 @@ final class ClientKycController
                 ]);
             }
         }
-        OperationalRecords::audit($db, $userId, 'client', 'client.kyc_document_submitted', 'client_kyc_document', $documentId, null, ['document_type' => $documentType], ['kyc_status' => 'submitted']);
         NotificationService::publishToRole($db, 'admin', 'admin.client_kyc_submitted', 'Client KYC awaiting review', 'A client has submitted or updated KYC documents for review.');
         NotificationService::publish($db, $userId, 'client.kyc_submitted', 'KYC submitted', 'Your KYC document was received and is awaiting operations review.');
 

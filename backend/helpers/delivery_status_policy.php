@@ -26,9 +26,6 @@ final class DeliveryStatusPolicy
             'broadcasted' => ['cancelled'],
             'assigned' => ['cancelled'],
             'driver_en_route' => ['cancelled'],
-            'picked_up' => ['cancelled'],
-            'in_transit' => ['cancelled'],
-            'arrived' => ['cancelled'],
             'delivered' => ['completed'],
         ][$from] ?? [], true);
     }

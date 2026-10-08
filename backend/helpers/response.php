@@ -12,6 +12,7 @@ class Response
         if (!headers_sent()) {
             http_response_code($statusCode);
             header('Content-Type: application/json; charset=UTF-8');
+            header('Cache-Control: no-store');
         }
         
         $payload = [
@@ -36,17 +37,19 @@ class Response
      *
      * @return never
      */
-    public static function paginated(array $items, int $totalCount, int $page, int $limit, ?string $message = null, int $statusCode = 200): never
+    public static function paginated(array $items, int $totalCount, int $page, int $limit, ?string $message = null, int $statusCode = 200, array $meta = []): never
     {
         if (!headers_sent()) {
             http_response_code($statusCode);
             header('Content-Type: application/json; charset=UTF-8');
+            header('Cache-Control: no-store');
         }
         
         $limit = max(1, $limit);
         $totalPages = (int) ceil($totalCount / $limit);
         $totalPages = max(1, $totalPages);
-        $page = max(1, min($page, $totalPages));
+        // Rows were already selected using the requested page.
+        $page = max(1, $page);
 
         $payload = [
             'status' => 'success',
@@ -66,6 +69,7 @@ class Response
             $payload['message'] = $message;
         }
 
+        if ($meta) $payload['meta'] = $meta;
         echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         exit;
     }

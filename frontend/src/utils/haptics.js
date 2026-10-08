@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Mobile Browser Haptic Feedback Utilities.
  *
  * Provides physical vibration confirmation for outdoor Kano dispatch drivers

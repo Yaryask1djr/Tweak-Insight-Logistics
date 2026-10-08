@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../helpers/response.php';
+require_once __DIR__ . '/../helpers/kyc_workflow.php';
+require_once __DIR__ . '/../helpers/http_input.php';
 require_once __DIR__ . '/../helpers/delivery_status_policy.php';
 require_once __DIR__ . '/../helpers/operational_records.php';
 require_once __DIR__ . '/../helpers/notification_service.php';
@@ -10,6 +12,10 @@ require_once __DIR__ . '/../helpers/storage_adapter.php';
 require_once __DIR__ . '/../helpers/secure_document_download.php';
 require_once __DIR__ . '/../helpers/database_transaction.php';
 require_once __DIR__ . '/../helpers/spatial_helper.php';
+require_once __DIR__ . '/../helpers/cursor_pagination.php';
+require_once __DIR__ . '/../helpers/listing_query.php';
+require_once __DIR__ . '/../helpers/csv_export.php';
+require_once __DIR__ . '/../helpers/delivery_resolution.php';
 require_once __DIR__ . '/ClientKycController.php';
 
 class AdminController
@@ -21,24 +27,23 @@ class AdminController
     {
         OperationsSchema::requireTables($db, ['drivers', 'driver_documents']);
         $limit = max(1, min(100, (int)($_GET['limit'] ?? 15)));
-        $cursor = isset($_GET['cursor']) ? (int)$_GET['cursor'] : null;
-        $cursorClause = $cursor === null ? '' : ' AND u.id < :cursor';
+        $cursor = CursorPagination::fromQuery($_GET);
+        $cursorClause = $cursor > 0 ? ' AND u.id < :cursor' : '';
 
         $stmt = $db->prepare("SELECT u.id, u.full_name, u.email, u.phone, u.address, u.created_at,
                               d.kyc_status,
                               (SELECT COUNT(*) FROM driver_documents dd WHERE dd.driver_id = d.id AND dd.verification_status = 'pending') AS pending_documents,
-                              (SELECT COUNT(DISTINCT dd.document_type) FROM driver_documents dd WHERE dd.driver_id = d.id AND dd.document_type IN ('government_id', 'drivers_license') AND dd.verification_status = 'verified') AS verified_mandatory_documents
+                              (SELECT COUNT(DISTINCT dd.document_type) FROM driver_documents dd WHERE dd.driver_id = d.id AND dd.document_type IN ('government_id', 'drivers_license') AND dd.verification_status = 'verified' AND (dd.expires_at IS NULL OR dd.expires_at >= UTC_DATE())) AS verified_mandatory_documents
                               FROM users u
                               LEFT JOIN drivers d ON d.user_id = u.id
                               WHERE u.role = 'delivery' AND u.is_approved = 0 AND COALESCE(d.kyc_status, 'not_submitted') <> 'rejected'{$cursorClause}
                               ORDER BY u.id DESC
                               LIMIT :limit");
-        if ($cursor !== null) $stmt->bindValue(':cursor', $cursor, PDO::PARAM_INT);
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        if ($cursor > 0) $stmt->bindValue(':cursor', $cursor, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
         $stmt->execute();
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $nextCursor = count($results) === $limit && !empty($results) ? (int)end($results)['id'] : null;
-        Response::json(['items' => $results, 'next_cursor' => $nextCursor, 'has_more' => $nextCursor !== null], 'Pending delivery partners retrieved.');
+        Response::json(CursorPagination::page($results, $limit), 'Pending delivery partners retrieved.');
     }
 
     /**
@@ -46,25 +51,10 @@ class AdminController
      */
     public static function approveDeliveryman(PDO $db, int $id, int $adminId): void
     {
-        OperationsSchema::requireTables($db, ['drivers', 'driver_documents', 'driver_availability']);
-        $driverId = OperationsSchema::ensureDriverProfile($db, $id);
-        $documents = $db->prepare("SELECT COUNT(DISTINCT document_type) FROM driver_documents WHERE driver_id = ? AND document_type IN ('government_id', 'drivers_license') AND verification_status = 'verified'");
-        $documents->execute([$driverId]);
-        if ((int)$documents->fetchColumn() < 2) {
-            Response::error('Verify both a government ID and driver licence before approving this delivery partner.', 422);
-        }
-        $stmt = $db->prepare("UPDATE users SET is_approved = 1, account_status = 'active' WHERE id = ? AND role = 'delivery'");
-        $stmt->execute([$id]);
-
-        if ($stmt->rowCount() > 0) {
-            $db->prepare("UPDATE drivers SET kyc_status = 'verified', kyc_reviewed_by = ?, kyc_reviewed_at = NOW(), kyc_rejection_reason = NULL, active_status = 'active' WHERE id = ?")->execute([$adminId, $driverId]);
-            $db->prepare("INSERT IGNORE INTO driver_availability (driver_id, availability_status) VALUES (?, 'offline')")->execute([$driverId]);
-            OperationalRecords::audit($db, $adminId, 'admin', 'driver.kyc_approved', 'driver', $driverId, null, ['user_id' => $id]);
-            NotificationService::publish($db, $id, 'driver.kyc_approved', 'Partner account approved', 'Your KYC review is complete. Set your availability when you are ready to receive Kano delivery offers.');
-            Response::json(['id' => $id, 'is_approved' => 1, 'kyc_status' => 'verified'], 'Delivery partner approved successfully.');
-        } else {
-            Response::error('Delivery partner not found or already approved.', 404);
-        }
+        try { KycWorkflow::driverDecision($db, $id, $adminId, true); }
+        catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        NotificationService::publish($db, $id, 'driver.kyc_approved', 'Partner account approved', 'Your KYC review is complete. Set your availability when you are ready to receive Kano delivery offers.');
+        Response::json(['id' => $id, 'is_approved' => 1, 'kyc_status' => 'verified'], 'Delivery partner approved successfully.');
     }
 
     /**
@@ -72,34 +62,10 @@ class AdminController
      */
     public static function rejectDeliveryman(PDO $db, int $id, int $adminId, string $reason): void
     {
-        OperationsSchema::requireTables($db, ['drivers', 'driver_documents', 'driver_availability']);
         $reason = trim($reason);
-        if ($reason === '') Response::error('A rejection reason is required.', 422);
-
-        $account = $db->prepare("SELECT id, is_approved FROM users WHERE id = ? AND role = 'delivery' LIMIT 1");
-        $account->execute([$id]);
-        $driverAccount = $account->fetch(PDO::FETCH_ASSOC);
-        if (!$driverAccount) Response::notFound('Delivery partner not found.');
-        if ((int)$driverAccount['is_approved'] === 1) Response::error('An approved delivery partner cannot be rejected from the pending KYC queue.', 409);
-
-        $driverId = OperationsSchema::ensureDriverProfile($db, $id);
-        try {
-            $db->beginTransaction();
-            // KYC rejection is not an account suspension: the partner must be able
-            // to sign in, see the reason, and upload corrected documents.
-            $db->prepare("UPDATE users SET account_status = 'active', is_approved = 0 WHERE id = ?")->execute([$id]);
-            $db->prepare("UPDATE drivers SET kyc_status = 'rejected', active_status = 'inactive', kyc_rejection_reason = ?, kyc_reviewed_by = ?, kyc_reviewed_at = NOW() WHERE id = ?")->execute([$reason, $adminId, $driverId]);
-            $db->prepare("UPDATE driver_documents SET verification_status = 'rejected', rejection_reason = ?, reviewed_by = ?, reviewed_at = NOW() WHERE driver_id = ? AND verification_status = 'pending'")->execute([$reason, $adminId, $driverId]);
-            $db->prepare("INSERT IGNORE INTO driver_availability (driver_id, availability_status) VALUES (?, 'offline')")->execute([$driverId]);
-            $db->prepare("UPDATE driver_availability SET availability_status = 'offline' WHERE driver_id = ?")->execute([$driverId]);
-            $db->commit();
-            OperationalRecords::audit($db, $adminId, 'admin', 'driver.kyc_rejected', 'driver', $driverId, null, ['user_id' => $id, 'kyc_status' => 'rejected', 'reason' => $reason]);
-            NotificationService::publish($db, $id, 'driver.kyc_rejected', 'KYC Verification: Action Required', 'Your KYC application requires attention: ' . $reason . '. Update and resubmit your documents.');
-        } catch (Throwable $exception) {
-            if ($db->inTransaction()) $db->rollBack();
-            throw $exception;
-        }
-
+        try { KycWorkflow::driverDecision($db, $id, $adminId, false, $reason); }
+        catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        NotificationService::publish($db, $id, 'driver.kyc_rejected', 'KYC Verification: Action Required', 'Your KYC application requires attention: ' . $reason . '. Update and resubmit your documents.');
         Response::json(['id' => $id, 'kyc_status' => 'rejected', 'reason' => $reason], 'Delivery partner KYC rejected. The partner can correct and resubmit documents.');
     }
 
@@ -109,7 +75,7 @@ class AdminController
     public static function getAllUsers(PDO $db): void
     {
         $limit = max(1, min(100, (int)($_GET['limit'] ?? 15)));
-        $cursor = isset($_GET['cursor']) ? (int)$_GET['cursor'] : null;
+        $cursor = CursorPagination::fromQuery($_GET);
         $role = trim($_GET['role'] ?? 'all');
 
         $whereClause = "";
@@ -119,7 +85,7 @@ class AdminController
             $whereClause = "WHERE role = :role";
             $params['role'] = $role;
         }
-        if ($cursor !== null) {
+        if ($cursor > 0) {
             $whereClause .= $whereClause ? ' AND id < :cursor' : 'WHERE id < :cursor';
             $params['cursor'] = $cursor;
         }
@@ -134,12 +100,11 @@ class AdminController
         foreach ($params as $k => $v) {
             $stmt->bindValue(":{$k}", $v);
         }
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
         $stmt->execute();
 
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $nextCursor = count($users) === $limit && !empty($users) ? (int)end($users)['id'] : null;
-        Response::json(['items' => $users, 'next_cursor' => $nextCursor, 'has_more' => $nextCursor !== null], 'Users retrieved.');
+        Response::json(CursorPagination::page($users, $limit), 'Users retrieved.');
     }
 
     /**
@@ -159,9 +124,14 @@ class AdminController
             // Revenue stats
             $revStmt = $db->query("SELECT 
                 COALESCE(SUM(total_cost), 0) as total_volume,
-                COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN total_cost ELSE 0 END), 0) as collected_revenue
+                COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN total_cost ELSE 0 END), 0) as collected_revenue,
+                COALESCE(SUM(CASE WHEN payment_status IN ('unpaid', 'pending') AND status NOT IN ('cancelled', 'rejected', 'failed') THEN total_cost ELSE 0 END), 0) as pending_receivables
                 FROM deliveries");
             $revenue = $revStmt->fetch(PDO::FETCH_ASSOC);
+            $earnings = $db->query("SELECT
+                COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) AS paid,
+                COALESCE(SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END), 0) AS pending
+                FROM delivery_earnings")->fetch(PDO::FETCH_ASSOC);
 
             // Fleet stats
             $driversStmt = $db->query("SELECT 
@@ -211,6 +181,9 @@ class AdminController
                 'cancelled' => (int)($statusCounts['cancelled'] ?? 0),
                 'total_volume' => (float)$revenue['total_volume'],
                 'collected_revenue' => (float)$revenue['collected_revenue'],
+                'pending_receivables' => (float)$revenue['pending_receivables'],
+                'partner_paid' => (float)$earnings['paid'],
+                'partner_pending' => (float)$earnings['pending'],
                 'delayed_shipments' => $delayedShipments,
                 'fleet' => [
                     'total' => (int)$drivers['total_drivers'],
@@ -252,20 +225,31 @@ class AdminController
      */
     public static function getAllDeliveries(PDO $db): void
     {
-        $limit = max(1, min(100, (int)($_GET['limit'] ?? 15)));
+        try {
+            [$page, $limit, $offset] = ListingQuery::page($_GET);
+            $order = ListingQuery::order($_GET, ['newest' => 'd.id DESC', 'oldest' => 'd.id ASC', 'cost_desc' => 'd.total_cost DESC, d.id DESC', 'cost_asc' => 'd.total_cost ASC, d.id DESC', 'status' => 'd.status ASC, d.id DESC'], 'newest');
+        } catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
         $status = trim($_GET['status'] ?? 'all');
-        $cursor = isset($_GET['cursor']) ? (int)$_GET['cursor'] : null;
+        $cursor = CursorPagination::fromQuery($_GET);
+        if ($cursor !== null && ($_GET['sort'] ?? 'newest') !== 'newest') Response::error('Cursor mode supports newest-first ordering. Use page mode for other sorts.', 422);
 
-        $whereClause = "";
+        $whereClause = 'WHERE 1 = 1';
         $params = [];
+        try { $search = ListingQuery::search($_GET); }
+        catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        if ($search !== '') {
+            $whereClause .= ' AND (d.tracking_number LIKE :search_ref OR d.item_description LIKE :search_item OR d.pickup_address LIKE :search_pickup OR d.delivery_address LIKE :search_delivery)';
+            foreach (['ref','item','pickup','delivery'] as $key) $params['search_' . $key] = '%' . $search . '%';
+        }
 
         if ($status !== 'all' && !empty($status)) {
-            $whereClause = "WHERE d.status = :status";
+            $whereClause .= " AND d.status = :status";
             $params['status'] = $status;
         }
 
         // Selective column projection — omit heavy text blobs on list views
         $columns = "d.id, d.tracking_number, d.status, d.service_type,
+                    d.delivery_person_id, d.preferred_delivery_time,
                     d.pickup_address, d.pickup_city, d.delivery_address, d.delivery_city,
                     d.pickup_contact_name, d.pickup_contact_phone,
                     d.delivery_contact_name, d.delivery_contact_phone,
@@ -278,8 +262,11 @@ class AdminController
 
         // Keyset (cursor) pagination — O(1) index seek regardless of depth
         if ($cursor !== null) {
-            $cursorWhere = $whereClause ? "{$whereClause} AND d.id < :cursor" : "WHERE d.id < :cursor";
-            $params['cursor'] = $cursor;
+            $cursorWhere = $whereClause;
+            if ($cursor > 0) {
+                $cursorWhere .= $whereClause ? ' AND d.id < :cursor' : 'WHERE d.id < :cursor';
+                $params['cursor'] = $cursor;
+            }
 
             $sql = "SELECT {$columns}
                     FROM deliveries d
@@ -293,23 +280,22 @@ class AdminController
             foreach ($params as $k => $v) {
                 $stmt->bindValue(":{$k}", $v);
             }
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
             $stmt->execute();
             $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $nextCursor = !empty($deliveries) ? (int)end($deliveries)['id'] : null;
+            $pageData = CursorPagination::page($deliveries, $limit);
 
             Response::json([
-                'deliveries'  => $deliveries,
-                'next_cursor' => $nextCursor,
-                'has_more'    => count($deliveries) === $limit,
+                'deliveries'  => $pageData['items'],
+                'next_cursor' => $pageData['next_cursor'],
+                'has_more'    => $pageData['has_more'],
             ], 'Deliveries retrieved.');
             return;
         }
 
         // Traditional offset pagination (backward compatible)
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $offset = ($page - 1) * $limit;
+
 
         $countStmt = $db->prepare("SELECT COUNT(*) FROM deliveries d {$whereClause}");
         $countStmt->execute($params);
@@ -320,7 +306,7 @@ class AdminController
                   LEFT JOIN users u1 ON d.client_id = u1.id
                   LEFT JOIN users u2 ON d.delivery_person_id = u2.id
                   {$whereClause}
-                  ORDER BY d.id DESC
+                  ORDER BY {$order}
                   LIMIT :limit OFFSET :offset";
 
         $stmt = $db->prepare($query);
@@ -347,22 +333,18 @@ class AdminController
             Response::error('Delivery ID is required to broadcast offer.');
         }
 
-        $stmt = $db->prepare("SELECT id, status, tracking_number FROM deliveries WHERE id = ?");
-        $stmt->execute([$deliveryId]);
-        $delivery = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$delivery) {
-            Response::error('Delivery not found.', 404);
-        }
-
-        if (!in_array($delivery['status'], ['under_review', 'broadcasted'], true)) {
-            Response::error("Delivery cannot be broadcasted in status '{$delivery['status']}'.", 400);
-        }
-
         OperationsSchema::requireTables($db, ['drivers', 'driver_availability', 'delivery_driver_offers']);
-        DatabaseTransaction::run($db, function(PDO $db) use ($delivery, $deliveryId, $adminId) {
+        $delivery = DatabaseTransaction::run($db, function(PDO $db) use ($deliveryId, $adminId) {
+            $stmt = $db->prepare('SELECT id, status, tracking_number FROM deliveries WHERE id = ? FOR UPDATE');
+            $stmt->execute([$deliveryId]);
+            $delivery = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$delivery) DatabaseTransaction::fail('Delivery not found.', 404);
+            if (!in_array($delivery['status'], ['under_review', 'broadcasted'], true)) {
+                DatabaseTransaction::fail("Delivery cannot be broadcasted in status '{$delivery['status']}'.", 409);
+            }
             if ($delivery['status'] === 'under_review') $db->prepare("UPDATE deliveries SET status = 'broadcasted' WHERE id = ?")->execute([$deliveryId]);
             self::materializeEligibleOffers($db, (int)$deliveryId, $adminId);
+            return $delivery;
         }, 3);
         if ($delivery['status'] === 'under_review') {
             OperationalRecords::statusTransition($db, (int)$deliveryId, 'under_review', 'broadcasted', $adminId, 'admin');
@@ -390,40 +372,26 @@ class AdminController
         self::transitionDelivery($db, 'completed', $adminId);
     }
 
-    /** Admin may reject pre-dispatch requests or cancel a live operational exception. */
+    /** Admin may reject requests or cancel before pickup; custody exceptions need separate resolution. */
     public static function resolveDelivery(PDO $db, int $adminId): void
     {
         $data = json_decode(file_get_contents('php://input'));
         $target = $data->status ?? '';
         if (!in_array($target, ['rejected', 'cancelled'], true)) Response::error('Status must be rejected or cancelled.');
+        if (isset($data->status_reason) && !is_string($data->status_reason)) Response::error('status_reason must be text.', 422);
         self::transitionDelivery($db, $target, $adminId, $data->status_reason ?? null, (int)($data->delivery_id ?? 0));
     }
 
     /** Operations reviews a submitted KYC document. */
     public static function reviewDriverDocument(PDO $db, int $adminId): void
     {
-        OperationsSchema::requireTables($db, ['drivers', 'driver_documents']);
-        $data = json_decode(file_get_contents('php://input'));
-        $documentId = (int)($data->document_id ?? 0);
-        $decision = $data->decision ?? '';
-        $reason = trim((string)($data->reason ?? ''));
-        if (!$documentId || !in_array($decision, ['verified', 'rejected'], true)) Response::error('document_id and decision (verified or rejected) are required.');
-        if ($decision === 'rejected' && $reason === '') Response::error('A rejection reason is required.', 422);
-
-        $query = $db->prepare('SELECT dd.id, dd.driver_id, dd.document_type, dd.verification_status, u.id AS user_id FROM driver_documents dd JOIN drivers d ON d.id = dd.driver_id JOIN users u ON u.id = d.user_id WHERE dd.id = ?');
-        $query->execute([$documentId]);
-        $document = $query->fetch(PDO::FETCH_ASSOC);
-        if (!$document) Response::notFound('Driver document not found.');
-        if ($document['verification_status'] !== 'pending') Response::error('Only pending documents can be reviewed.', 409);
-
-        $update = $db->prepare('UPDATE driver_documents SET verification_status = ?, reviewed_by = ?, reviewed_at = NOW(), rejection_reason = ? WHERE id = ?');
-        $update->execute([$decision, $adminId, $decision === 'rejected' ? $reason : null, $documentId]);
-        if ($decision === 'rejected') {
-            $db->prepare("UPDATE drivers SET kyc_status = 'rejected', kyc_rejection_reason = ?, kyc_reviewed_by = ?, kyc_reviewed_at = NOW() WHERE id = ? AND kyc_status <> 'verified'")->execute([$reason, $adminId, (int)$document['driver_id']]);
-        } else {
-            $db->prepare("UPDATE drivers SET kyc_status = 'under_review', kyc_rejection_reason = NULL, kyc_reviewed_by = ?, kyc_reviewed_at = NOW() WHERE id = ? AND kyc_status IN ('submitted', 'under_review')")->execute([$adminId, (int)$document['driver_id']]);
-        }
-        OperationalRecords::audit($db, $adminId, 'admin', 'driver.document_reviewed', 'driver_document', $documentId, ['verification_status' => 'pending'], ['verification_status' => $decision], ['reason' => $reason]);
+        try {
+            $data = HttpInput::readObject();
+            $documentId = HttpInput::positiveId($data, 'document_id');
+            $decision = HttpInput::text($data, 'decision', 16);
+            $reason = HttpInput::text($data, 'reason', 500, $decision === 'rejected');
+            $document = KycWorkflow::reviewDriverDocument($db, $documentId, $adminId, $decision, $reason);
+        } catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
         if ($decision === 'rejected') {
             NotificationService::driverDocumentIssue($db, (int)$document['user_id'], 'Document needs attention', ucfirst(str_replace('_', ' ', $document['document_type'])) . ': ' . $reason, ['document_id' => $documentId]);
         } else {
@@ -444,7 +412,7 @@ class AdminController
                    u.id AS user_id, u.full_name, u.email, u.phone, u.created_at AS user_created_at,
                    (SELECT COUNT(DISTINCT dd_sub.document_type) FROM driver_documents dd_sub 
                     WHERE dd_sub.driver_id = d.id AND dd_sub.document_type IN ('government_id', 'drivers_license') 
-                    AND dd_sub.verification_status = 'verified') AS verified_mandatory_docs
+                    AND dd_sub.verification_status = 'verified' AND (dd_sub.expires_at IS NULL OR dd_sub.expires_at >= UTC_DATE())) AS verified_mandatory_docs
             FROM driver_documents dd 
             JOIN drivers d ON d.id = dd.driver_id 
             JOIN users u ON u.id = d.user_id 
@@ -487,11 +455,11 @@ class AdminController
         if (!$deliveryId || $reason === '') Response::error('delivery_id and a release reason are required.');
 
         $assignmentData = DatabaseTransaction::run($db, function(PDO $db) use ($deliveryId, $reason, $adminId) {
-            $deliveryQuery = $db->prepare('SELECT id, client_id, delivery_person_id, status, tracking_number FROM deliveries WHERE id = ? FOR UPDATE');
+            $deliveryQuery = $db->prepare('SELECT id, client_id, delivery_person_id, status, tracking_number, pickup_time FROM deliveries WHERE id = ? FOR UPDATE');
             $deliveryQuery->execute([$deliveryId]);
             $delivery = $deliveryQuery->fetch(PDO::FETCH_ASSOC);
             if (!$delivery) DatabaseTransaction::fail('Delivery not found.', 404);
-            if (!in_array($delivery['status'], ['assigned', 'driver_en_route'], true) || empty($delivery['delivery_person_id'])) {
+            if (!in_array($delivery['status'], ['assigned', 'driver_en_route'], true) || empty($delivery['delivery_person_id']) || !empty($delivery['pickup_time'])) {
                 DatabaseTransaction::fail('Assignments may be released only before pickup.', 409);
             }
 
@@ -540,6 +508,11 @@ class AdminController
             $driverQuery->execute([$driverUserId]); 
             $driverId = (int)$driverQuery->fetchColumn();
             if (!$driverId) DatabaseTransaction::fail('The selected driver is not eligible and available for dispatch.', 422);
+            $work = $db->prepare("SELECT COUNT(*) FROM deliveries WHERE delivery_person_id = ?
+                AND (status IN ('assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived')
+                    OR (pickup_time IS NOT NULL AND status NOT IN ('delivered', 'completed')))");
+            $work->execute([$driverUserId]);
+            if ((int)$work->fetchColumn() > 0) DatabaseTransaction::fail('The selected driver has an unresolved assignment or parcel custody.', 409);
 
             $sequence = $db->prepare('SELECT COALESCE(MAX(assignment_sequence), 0) + 1 FROM delivery_assignments WHERE delivery_id = ?'); 
             $sequence->execute([$deliveryId]); 
@@ -569,46 +542,27 @@ class AdminController
         if (($to = trim($_GET['to'] ?? '')) !== '') { $where[] = 'a.created_at < DATE_ADD(:to_date, INTERVAL 1 DAY)'; $params['to_date'] = $to; }
         $whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
         $base = "SELECT a.id, a.action, a.entity_type, a.entity_id, a.delivery_id, a.actor_role, a.created_at, u.full_name AS actor_name FROM audit_logs a LEFT JOIN users u ON u.id = a.actor_user_id {$whereSql} ORDER BY a.created_at DESC";
-        if (($_GET['format'] ?? '') === 'csv') { $csv = $db->prepare($base . ' LIMIT 10000'); $csv->execute($params); header('Content-Type: text/csv'); header('Content-Disposition: attachment; filename="operations-audit.csv"'); $out = fopen('php://output', 'w'); fputcsv($out, ['Time', 'Action', 'Actor role', 'Actor', 'Record', 'Delivery']); foreach ($csv->fetchAll(PDO::FETCH_ASSOC) as $row) fputcsv($out, [$row['created_at'], $row['action'], $row['actor_role'], $row['actor_name'], $row['entity_type'] . ' #' . $row['entity_id'], $row['delivery_id']]); fclose($out); exit; }
+        if (($_GET['format'] ?? '') === 'csv') {
+            $count = $db->prepare("SELECT COUNT(*) FROM audit_logs a {$whereSql}"); $count->execute($params);
+            if ((int)$count->fetchColumn() > 10000) Response::error('This report exceeds 10,000 rows. Use the asynchronous export to download all matching records.', 422);
+            $csv = $db->prepare($base . ' LIMIT 10000');
+            $csv->execute($params);
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="operations-audit.csv"');
+            header('X-Export-Row-Limit: 10000');
+            $out = fopen('php://output', 'w');
+            CsvExport::write($out, ['Time', 'Action', 'Actor role', 'Actor', 'Record', 'Delivery']);
+            while ($row = $csv->fetch(PDO::FETCH_ASSOC)) {
+                CsvExport::write($out, [$row['created_at'], $row['action'], $row['actor_role'], $row['actor_name'], $row['entity_type'] . ' #' . $row['entity_id'], $row['delivery_id']]);
+            }
+            fclose($out);
+            exit;
+        }
         $count = $db->prepare("SELECT COUNT(*) FROM audit_logs a {$whereSql}"); $count->execute($params); $total = (int)$count->fetchColumn();
         $statement = $db->prepare($base . ' LIMIT :limit OFFSET :offset');
         foreach ($params as $key => $value) $statement->bindValue(':' . $key, $value);
         $statement->bindValue(':limit', $limit, PDO::PARAM_INT); $statement->bindValue(':offset', $offset, PDO::PARAM_INT); $statement->execute();
         Response::paginated($statement->fetchAll(PDO::FETCH_ASSOC), $total, $page, $limit, 'Operations audit records retrieved.');
-    }
-
-    /** Queue asynchronous audit export via background worker daemon */
-    public static function queueAuditExport(PDO $db, int $adminId): void
-    {
-        OperationsSchema::requireTables($db, ['audit_logs']);
-        $data = json_decode(file_get_contents('php://input'), true) ?: [];
-
-        $filters = [
-            'action'      => trim((string)($data['action'] ?? '')),
-            'actor_role'  => trim((string)($data['actor_role'] ?? '')),
-            'delivery_id' => !empty($data['delivery_id']) ? (int)$data['delivery_id'] : null,
-            'from_date'   => trim((string)($data['from_date'] ?? '')),
-            'to_date'     => trim((string)($data['to_date'] ?? '')),
-        ];
-
-        require_once __DIR__ . '/../helpers/job_queue.php';
-        JobQueue::setDb($db);
-        $exportId = bin2hex(random_bytes(6));
-        $success = JobQueue::push('audit.export', [
-            'admin_id'  => $adminId,
-            'export_id' => $exportId,
-            'filters'   => array_filter($filters),
-        ]);
-
-        if (!$success) {
-            Response::error('Failed to dispatch asynchronous export job.', 500);
-        }
-
-        Response::json([
-            'export_id' => $exportId,
-            'status'    => 'queued',
-            'message'   => 'Audit export job queued successfully for background worker processing.'
-        ], 'Audit log export queued.', 202);
     }
 
     /** Generate a manually requested delivery report; never used by live dashboards. */
@@ -644,14 +598,17 @@ class AdminController
             {$whereSql}
             ORDER BY d.request_time DESC
             LIMIT 10000");
+        $count = $db->prepare("SELECT COUNT(*) FROM deliveries d {$whereSql}"); $count->execute($params);
+        if ((int)$count->fetchColumn() > 10000) Response::error('This report exceeds 10,000 rows. Use the asynchronous export for all matching records.', 422);
         $statement->execute($params);
 
         header('Content-Type: text/csv; charset=UTF-8');
         header('Content-Disposition: attachment; filename="delivery-report.csv"');
+        header('X-Export-Row-Limit: 10000');
         $output = fopen('php://output', 'w');
-        fputcsv($output, ['Tracking number', 'Status', 'Service type', 'Category', 'Weight kg', 'Total cost', 'Payment status', 'Requested', 'Picked up', 'Delivered', 'Client', 'Driver']);
+        CsvExport::write($output, ['Tracking number', 'Status', 'Service type', 'Category', 'Weight kg', 'Total cost', 'Payment status', 'Requested', 'Picked up', 'Delivered', 'Client', 'Driver']);
         while ($row = $statement->fetch(PDO::FETCH_ASSOC)) {
-            fputcsv($output, $row);
+            CsvExport::write($output, $row);
         }
         fclose($output);
         exit;
@@ -664,7 +621,7 @@ class AdminController
     private static function materializeEligibleOffers(PDO $db, int $deliveryId, int $adminId): void
     {
         // Retrieve shipment cargo weight and pickup coordinates
-        $deliveryStmt = $db->prepare('SELECT COALESCE(weight_kg, 0) AS weight_kg, pickup_latitude, pickup_longitude FROM deliveries WHERE id = ?');
+        $deliveryStmt = $db->prepare('SELECT COALESCE(item_weight, 0) AS weight_kg, pickup_latitude, pickup_longitude FROM deliveries WHERE id = ?');
         $deliveryStmt->execute([$deliveryId]);
         $deliveryData = $deliveryStmt->fetch(PDO::FETCH_ASSOC);
         $cargoWeight = (float)($deliveryData['weight_kg'] ?? 0);
@@ -714,19 +671,12 @@ class AdminController
             $deliveryId = (int)($data->delivery_id ?? 0);
         }
         if (!$deliveryId) Response::error('Delivery ID is required.');
-        $stmt = $db->prepare('SELECT id, status, tracking_number FROM deliveries WHERE id = ?');
-        $stmt->execute([$deliveryId]);
-        $delivery = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$delivery) Response::error('Delivery not found.', 404);
-        if (!DeliveryStatusPolicy::adminTransition($delivery['status'], $targetStatus)) {
-            Response::error("Admin cannot move a delivery from '{$delivery['status']}' to '{$targetStatus}'.", 409);
+        $tables = ['delivery_status_history', 'audit_logs'];
+        if ($targetStatus === 'cancelled') {
+            $tables = array_merge($tables, ['drivers', 'driver_availability', 'delivery_assignments', 'delivery_driver_offers']);
         }
-        if (in_array($targetStatus, ['rejected', 'cancelled'], true) && trim((string)$reason) === '') {
-            Response::error('A reason is required to reject or cancel a delivery.', 422);
-        }
-        $update = $db->prepare('UPDATE deliveries SET status = ?, status_reason = ? WHERE id = ?');
-        $update->execute([$targetStatus, $reason ? trim($reason) : null, $deliveryId]);
-        OperationalRecords::statusTransition($db, $deliveryId, $delivery['status'], $targetStatus, $adminId, 'admin', $reason);
+        OperationsSchema::requireTables($db, $tables);
+        $delivery = DatabaseTransaction::run($db, static fn(PDO $db) => DeliveryResolution::apply($db, $deliveryId, $targetStatus, $adminId, $reason));
         NotificationService::deliveryStatusChanged($db, $deliveryId, $delivery['status'], $targetStatus);
         Response::json(['delivery_id' => $deliveryId, 'tracking_number' => $delivery['tracking_number'], 'status' => $targetStatus], 'Delivery status updated to ' . DeliveryStatusPolicy::label($targetStatus) . '.');
     }
@@ -806,46 +756,11 @@ class AdminController
      */
     public static function approveClientKyc(PDO $db, int $adminId): void
     {
-        OperationsSchema::requireTables($db, ['clients', 'client_kyc_documents']);
-        $data   = json_decode(file_get_contents('php://input'));
-        $userId = (int)($data->user_id ?? 0);
-        if (!$userId) Response::error('user_id is required.');
-
-        $stmt = $db->prepare("SELECT id, kyc_status FROM clients WHERE user_id = ? LIMIT 1");
-        $stmt->execute([$userId]);
-        $client = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$client) Response::notFound('Client not found.');
-        if (!in_array($client['kyc_status'], ['submitted', 'under_review'], true)) Response::error('Only submitted client KYC records can be approved.', 409);
-
-        $documents = $db->prepare("SELECT
-                COUNT(*) AS total,
-                SUM(verification_status = 'pending') AS pending,
-                SUM(verification_status IN ('rejected', 'expired')) AS invalid,
-                SUM(expires_at IS NOT NULL AND expires_at < UTC_DATE()) AS expired
-            FROM client_kyc_documents
-            WHERE client_id = ?");
-        $documents->execute([(int)$client['id']]);
-        $documentSummary = $documents->fetch(PDO::FETCH_ASSOC);
-        if (!(int)$documentSummary['total']) Response::error('Upload at least one KYC document before approval.', 422);
-        if (!(int)$documentSummary['pending']) Response::error('No pending KYC documents are available for approval.', 409);
-        if ((int)$documentSummary['invalid'] || (int)$documentSummary['expired']) Response::error('Replace rejected or expired KYC documents before approval.', 422);
-
         try {
-            $db->beginTransaction();
-            $db->prepare("UPDATE clients SET kyc_status = 'verified', kyc_rejection_reason = NULL, kyc_reviewed_by = ?, kyc_reviewed_at = NOW() WHERE id = ?")->execute([$adminId, (int)$client['id']]);
-            $db->prepare("UPDATE client_kyc_documents SET verification_status = 'verified', rejection_reason = NULL, reviewed_by = ?, reviewed_at = NOW() WHERE client_id = ? AND verification_status = 'pending' AND (expires_at IS NULL OR expires_at >= UTC_DATE())")->execute([$adminId, (int)$client['id']]);
-            $db->commit();
-        } catch (Throwable $exception) {
-            if ($db->inTransaction()) $db->rollBack();
-            throw $exception;
-        }
-
-        OperationalRecords::audit($db, $adminId, 'admin', 'client.kyc_approved', 'client', (int)$client['id'], ['kyc_status' => $client['kyc_status']], ['kyc_status' => 'verified']);
-        NotificationService::publish($db, $userId, 'client.kyc_approved',
-            '✓ Account Verified',
-            'Congratulations! Your identity has been verified. You can now request deliveries and access all client features.'
-        );
-
+            $userId = HttpInput::positiveId(HttpInput::readObject(), 'user_id');
+            KycWorkflow::clientDecision($db, $userId, $adminId, true);
+        } catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        NotificationService::publish($db, $userId, 'client.kyc_approved', 'Account verified', 'Your identity has been verified. You can now request deliveries and access all client features.');
         Response::json(['user_id' => $userId, 'kyc_status' => 'verified'], 'Client KYC approved successfully.');
     }
 
@@ -854,35 +769,13 @@ class AdminController
      */
     public static function rejectClientKyc(PDO $db, int $adminId): void
     {
-        OperationsSchema::requireTables($db, ['clients', 'client_kyc_documents']);
-        $data   = json_decode(file_get_contents('php://input'));
-        $userId = (int)($data->user_id ?? 0);
-        $reason = trim((string)($data->reason ?? ''));
-        if (!$userId) Response::error('user_id is required.');
-        if ($reason === '') Response::error('A rejection reason is required.', 422);
-
-        $stmt = $db->prepare("SELECT id, kyc_status FROM clients WHERE user_id = ? LIMIT 1");
-        $stmt->execute([$userId]);
-        $client = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$client) Response::notFound('Client not found.');
-        if (!in_array($client['kyc_status'], ['submitted', 'under_review'], true)) Response::error('Only submitted client KYC records can be rejected.', 409);
-
         try {
-            $db->beginTransaction();
-            $db->prepare("UPDATE clients SET kyc_status = 'rejected', kyc_rejection_reason = ?, kyc_reviewed_by = ?, kyc_reviewed_at = NOW() WHERE id = ?")->execute([$reason, $adminId, (int)$client['id']]);
-            $db->prepare("UPDATE client_kyc_documents SET verification_status = 'rejected', rejection_reason = ?, reviewed_by = ?, reviewed_at = NOW() WHERE client_id = ? AND verification_status = 'pending'")->execute([$reason, $adminId, (int)$client['id']]);
-            $db->commit();
-        } catch (Throwable $exception) {
-            if ($db->inTransaction()) $db->rollBack();
-            throw $exception;
-        }
-
-        OperationalRecords::audit($db, $adminId, 'admin', 'client.kyc_rejected', 'client', (int)$client['id'], ['kyc_status' => $client['kyc_status']], ['kyc_status' => 'rejected', 'reason' => $reason]);
-        NotificationService::publish($db, $userId, 'client.kyc_rejected',
-            'KYC Verification: Action Required',
-            'Your KYC submission requires attention: ' . $reason . '. Please update and resubmit your documents.'
-        );
-
+            $data = HttpInput::readObject();
+            $userId = HttpInput::positiveId($data, 'user_id');
+            $reason = HttpInput::text($data, 'reason', 500);
+            KycWorkflow::clientDecision($db, $userId, $adminId, false, $reason);
+        } catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        NotificationService::publish($db, $userId, 'client.kyc_rejected', 'KYC verification: action required', 'Your KYC submission requires attention: ' . $reason . '. Please update and resubmit your documents.');
         Response::json(['user_id' => $userId, 'kyc_status' => 'rejected', 'reason' => $reason], 'Client KYC rejected.');
     }
 

@@ -25,7 +25,21 @@ cd ../backend
 php -S localhost:8000 router.php
 ```
 
-Open `http://localhost:8000`. The router serves the React app for all user-facing routes and keeps `/api/*` for PHP endpoints. Legacy PHP URLs redirect to their React equivalents.
+`build:backend` prepares an immutable frontend release and prints its release ID.
+After reviewing that release, activate it explicitly with
+`node scripts/deploy-backend-build.js --activate=RELEASE_ID` from `frontend`.
+Until activation, the previous release remains in use. Open
+`http://localhost:8000`. The router serves React routes and keeps `/api/*` for PHP
+endpoints. PHP's built-in server is for local verification, not production traffic.
+
+Use Node 20.19 or newer for this source tree and install locked dependencies with
+`npm ci` in `frontend` and `composer install` in `backend`. The deployed PHP API
+requires the Composer autoloader; a frontend build alone is not a runnable backend.
+
+See the [29 September enterprise audit](backend/docs/ENTERPRISE_AUDIT_2026-09-29.md),
+[R04–R12 rollout](backend/docs/R04_R12_IMPLEMENTATION.md), and
+[fare/payment verification rollout](backend/docs/FARE_AND_PAYMENT_VERIFICATION.md)
+for additional migrations and the remaining release gates.
 
 ## Production document-root requirement
 

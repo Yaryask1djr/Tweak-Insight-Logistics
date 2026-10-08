@@ -7,7 +7,7 @@ import QueryState from '../common/QueryState';
 import Pagination from '../common/Pagination';
 
 export const UsersTab = () => {
-    const [limit, setLimit] = useState(15);
+    const [limit] = useState(15);
     const [role, setRole] = useState('all');
 
     const users = useInfiniteQuery({
@@ -114,8 +114,8 @@ export const FleetTab = () => {
     const queryClient = useQueryClient();
 
     const drivers = useQuery({
-        queryKey: ['admin', 'drivers', page],
-        queryFn: () => apiGet(`/admin/drivers?page=${page}&limit=50`),
+        queryKey: ['admin', 'drivers', page, availabilityFilter, searchDriver],
+        queryFn: ({ signal }) => apiGet(`/admin/drivers?${new URLSearchParams({ page, limit: 25, availability: availabilityFilter, search: searchDriver })}`, { signal }),
     });
 
     const update = useMutation({
@@ -135,27 +135,8 @@ export const FleetTab = () => {
         return <QueryState query={drivers} loading={<TableSkeleton rows={6} cols={7} />} />;
     }
 
-    const rawDrivers = drivers.data?.data || [];
-    const filteredDrivers = rawDrivers.filter(d => {
-        if (availabilityFilter !== 'all' && (d.availability_status || 'offline') !== availabilityFilter) return false;
-        if (searchDriver.trim()) {
-            const q = searchDriver.toLowerCase();
-            return (
-                String(d.full_name || '').toLowerCase().includes(q) ||
-                String(d.phone || '').includes(q) ||
-                String(d.vehicle_type || '').toLowerCase().includes(q) ||
-                String(d.vehicle_registration || '').toLowerCase().includes(q)
-            );
-        }
-        return true;
-    });
-
-    const counts = {
-        total: rawDrivers.length,
-        available: rawDrivers.filter(d => d.availability_status === 'available').length,
-        busy: rawDrivers.filter(d => d.availability_status === 'busy').length,
-        offline: rawDrivers.filter(d => !d.availability_status || d.availability_status === 'offline').length,
-    };
+    const filteredDrivers = drivers.data?.data || [];
+    const counts = drivers.data?.meta?.counts || { total: 0, available: 0, busy: 0, offline: 0 };
 
     return (
         <div className="card border-0 shadow-sm custom-card p-4">
@@ -211,14 +192,14 @@ export const FleetTab = () => {
                         className="form-control"
                         placeholder="Search rider, phone, vehicle…"
                         value={searchDriver}
-                        onChange={e => setSearchDriver(e.target.value)}
+                        onChange={e => { setSearchDriver(e.target.value); setPage(1); }}
                     />
                 </div>
                 <select
                     className="form-select form-select-sm"
                     style={{ width: 'auto' }}
                     value={availabilityFilter}
-                    onChange={e => setAvailabilityFilter(e.target.value)}
+                    onChange={e => { setAvailabilityFilter(e.target.value); setPage(1); }}
                 >
                     <option value="all">All Duty States</option>
                     <option value="available">🟢 Available only</option>
@@ -333,27 +314,30 @@ const emptyRateCard = () => ({
 });
 
 export const RateCardsTab = () => {
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(25);
+    const [search, setSearch] = useState("");
     const [form, setForm] = useState(emptyRateCard);
     const queryClient = useQueryClient();
 
     const cards = useQuery({
-        queryKey: ['admin', 'rate-cards'],
-        queryFn: () => apiGet('/admin/rate-cards'),
+        queryKey: ['admin', 'rate-cards', page, limit, search],
+        queryFn: ({ signal }) => apiGet(`/admin/rate-cards?${new URLSearchParams({ page, limit, search })}`, { signal }),
     });
-
-    if (cards.isError && !cards.data) {
-        return <QueryState query={cards} loading={<TableSkeleton rows={4} cols={4} />} />;
-    }
 
     const save = useMutation({
         mutationFn: payload => apiPost('/admin/rate-cards', payload),
         onSuccess: () => {
-            showToast.success('Rate card saved for future quote integration.');
+            showToast.success('Rate card saved for future delivery quotes.');
             setForm(emptyRateCard());
             queryClient.invalidateQueries({ queryKey: ['admin', 'rate-cards'] });
         },
         onError: () => showToast.error('Could not save the rate card.'),
     });
+
+    if (cards.isError && !cards.data) {
+        return <QueryState query={cards} loading={<TableSkeleton rows={4} cols={4} />} />;
+    }
 
     const changeRule = (index, amount) =>
         setForm(current => ({
@@ -376,6 +360,7 @@ export const RateCardsTab = () => {
     return (
         <div className="card border-0 shadow-sm custom-card p-4">
             <h4 className="fw-bold mb-1">Kano Rate Cards</h4>
+            <input aria-label="Search rate cards" className="form-control mb-2" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search rate cards" />
             <p className="text-muted">
                 The latest active card for each service is applied by the backend to new Kano
                 quotes and requests. Existing deliveries keep their original price snapshot.
@@ -475,6 +460,7 @@ export const RateCardsTab = () => {
                     </table>
                 </div>
             )}
+            <Pagination pagination={cards.data?.pagination} onPageChange={setPage} onLimitChange={value => { setLimit(value); setPage(1); }} />
         </div>
     );
 };
@@ -496,10 +482,6 @@ export const BusinessAccountsTab = () => {
         queryFn: () => apiGet(`/admin/business-accounts?page=${page}&limit=20`),
     });
 
-    if (accounts.isError && !accounts.data) {
-        return <QueryState query={accounts} loading={<TableSkeleton rows={6} cols={6} />} />;
-    }
-
     const save = useMutation({
         mutationFn: payload => apiPost('/admin/business-accounts', payload),
         onSuccess: () => {
@@ -508,6 +490,10 @@ export const BusinessAccountsTab = () => {
         },
         onError: () => showToast.error('Could not update business account.'),
     });
+
+    if (accounts.isError && !accounts.data) {
+        return <QueryState query={accounts} loading={<TableSkeleton rows={6} cols={6} />} />;
+    }
 
     const create = event => {
         event.preventDefault();
@@ -675,4 +661,3 @@ export const BusinessAccountsTab = () => {
         </div>
     );
 };
-

@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../helpers/password_policy.php';
+require_once __DIR__ . '/../helpers/account_registration.php';
+
 require_once __DIR__ . '/../helpers/jwt.php';
 require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/kano_service_area.php';
@@ -15,10 +18,12 @@ class AuthController
      */
     public static function login(PDO $db): void
     {
-        $data = json_decode(file_get_contents("php://input"));
-
-        if (empty($data->email) || empty($data->password)) {
-            Response::error('Email and password are required.');
+        $data = (object)HttpInput::readObject();
+        try {
+            $data->email = HttpInput::text((array)$data, 'email', 191);
+            $data->password = HttpInput::text((array)$data, 'password', 1024, true, false);
+        } catch (TransactionBusinessException $e) {
+            Response::error($e->getMessage(), $e->getStatusCode());
         }
 
         $stmt = $db->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
@@ -68,6 +73,9 @@ class AuthController
         try {
             RefreshSession::assertBrowserRefreshRequest();
             $user = RefreshSession::rotate($db);
+        } catch (RefreshRotationConflict $exception) {
+            header('Retry-After: 1');
+            Response::error('Session refresh is already completing. Retry shortly.', 409, ['retryable' => true]);
         } catch (Throwable $exception) {
             // Do not reveal whether a particular refresh token existed or why it
             // was invalidated. The cookie has already been cleared by the helper.
@@ -99,97 +107,26 @@ class AuthController
      */
     public static function registerClient(PDO $db): void
     {
-        $data = json_decode(file_get_contents("php://input"));
-
-        $required = ['full_name', 'email', 'password', 'phone'];
-        foreach ($required as $field) {
-            if (empty($data->$field)) {
-                Response::error("The field '{$field}' is required.");
-            }
-        }
-
-        if (!filter_var($data->email, FILTER_VALIDATE_EMAIL)) {
-            Response::error('Please provide a valid email address.');
-        }
-
-        // Check uniqueness
-        $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([trim($data->email)]);
-        if ($stmt->fetch()) {
-            Response::error('An account with this email already exists.', 409);
-        }
-
-        $hashedPassword = password_hash($data->password, PASSWORD_DEFAULT);
-        $address = trim($data->address ?? '');
-        if ($address !== '') {
-            KanoServiceArea::assertAddress($address, 'Default address');
-        }
-
-        $insert = $db->prepare("INSERT INTO users (role, full_name, email, phone, password_hash, address, is_approved) VALUES ('client', ?, ?, ?, ?, ?, 1)");
-        $insert->execute([
-            trim($data->full_name),
-            trim($data->email),
-            trim($data->phone),
-            $hashedPassword,
-            $address
-        ]);
-
-        $userId = (int)$db->lastInsertId();
-        OperationsSchema::ensureClientProfile($db, $userId);
-
-        Response::json([
-            'user_id' => $userId,
-            'role' => 'client',
-            'full_name' => $data->full_name,
-            'email' => $data->email
-        ], 'Client registered successfully.', 201);
+        $result = self::register($db, 'client');
+        Response::json($result, 'Client registered successfully.', 201);
     }
 
-    /**
-     * Register a new delivery partner (pending KYC approval)
-     */
     public static function registerDelivery(PDO $db): void
     {
-        $data = json_decode(file_get_contents("php://input"));
+        $result = self::register($db, 'delivery');
+        Response::json($result + ['is_approved' => 0], 'Registration submitted successfully. Your account is pending administrative approval.', 201);
+    }
 
-        $required = ['full_name', 'email', 'password', 'phone', 'address'];
-        foreach ($required as $field) {
-            if (empty($data->$field)) {
-                Response::error("The field '{$field}' is required.");
-            }
+    private static function register(PDO $db, string $role): array
+    {
+        try {
+            $fields = AccountRegistration::validate(HttpInput::readObject(), $role);
+            if ($fields['address'] !== '') KanoServiceArea::assertAddress($fields['address'], $role === 'client' ? 'Default address' : 'Operating base');
+            $userId = AccountRegistration::create($db, $fields, $role);
+            return ['user_id' => $userId, 'role' => $role, 'full_name' => $fields['full_name'], 'email' => $fields['email']];
+        } catch (TransactionBusinessException $e) {
+            Response::error($e->getMessage(), $e->getStatusCode());
         }
-
-        if (!filter_var($data->email, FILTER_VALIDATE_EMAIL)) {
-            Response::error('Please provide a valid email address.');
-        }
-
-        $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->execute([trim($data->email)]);
-        if ($stmt->fetch()) {
-            Response::error('An account with this email already exists.', 409);
-        }
-
-        $hashedPassword = password_hash($data->password, PASSWORD_DEFAULT);
-        $address = trim($data->address ?? '');
-        KanoServiceArea::assertAddress($address, 'Operating base');
-
-        $insert = $db->prepare("INSERT INTO users (role, full_name, email, phone, password_hash, address, is_approved) VALUES ('delivery', ?, ?, ?, ?, ?, 0)");
-        $insert->execute([
-            trim($data->full_name),
-            trim($data->email),
-            trim($data->phone),
-            $hashedPassword,
-            $address
-        ]);
-
-        $userId = (int)$db->lastInsertId();
-        OperationsSchema::ensureDriverProfile($db, $userId);
-
-        Response::json([
-            'user_id' => $userId,
-            'role' => 'delivery',
-            'is_approved' => 0
-        ], 'Registration submitted successfully. Your account is pending administrative approval.', 201);
     }
 
     /**
@@ -219,15 +156,15 @@ class AuthController
      */
     public static function changePassword(PDO $db, array $user): void
     {
-        $data = json_decode(file_get_contents('php://input'));
-
-        if (empty($data->current_password) || empty($data->new_password)) {
-            Response::error('Both current_password and new_password are required.');
+        $data = (object)HttpInput::readObject();
+        try {
+            $data->current_password = HttpInput::text((array)$data, 'current_password', 1024, true, false);
+            $data->new_password = HttpInput::text((array)$data, 'new_password', 72, true, false);
+        } catch (TransactionBusinessException $e) {
+            Response::error($e->getMessage(), $e->getStatusCode());
         }
 
-        if (strlen($data->new_password) < 8) {
-            Response::error('New password must be at least 8 characters long.');
-        }
+        PasswordPolicy::validate($data->new_password);
 
         // Fetch current hash
         $stmt = $db->prepare("SELECT password_hash FROM users WHERE id = ?");
@@ -241,9 +178,13 @@ class AuthController
         $newHash = password_hash($data->new_password, PASSWORD_DEFAULT);
 
         // Update password AND rotate token_version atomically to invalidate all sessions
-        $db->prepare("UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?")
-           ->execute([$newHash, $user['id']]);
-        RefreshSession::revokeAllForUser($db, (int)$user['id'], 'password_changed');
+        DatabaseTransaction::run($db, static function (PDO $db) use ($newHash, $user, $row): void {
+            $update = $db->prepare("UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ? AND password_hash = ?");
+            $update->execute([$newHash, $user['id'], $row['password_hash']]);
+            if ($update->rowCount() !== 1) DatabaseTransaction::fail('Your password changed during this request. Sign in again.', 409);
+            $db->prepare("UPDATE auth_refresh_sessions SET revoked_at = UTC_TIMESTAMP(), revoked_reason = 'password_changed' WHERE user_id = ? AND revoked_at IS NULL")->execute([$user['id']]);
+        });
+        RefreshSession::clearCookie();
 
         Response::json([], 'Password changed successfully. All other active sessions have been signed out.');
     }

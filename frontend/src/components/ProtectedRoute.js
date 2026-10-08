@@ -1,4 +1,4 @@
-﻿import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
 /**
@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     if (!user) {
         return (
             <Navigate
-                to={`/login?redirect=${encodeURIComponent(location.pathname)}`}
+                to={`/login?redirect=${encodeURIComponent(location.pathname + location.search + location.hash)}`}
                 replace
             />
         );

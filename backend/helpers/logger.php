@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/client_ip.php';
+require_once __DIR__ . '/security_config.php';
+require_once __DIR__ . '/log_sanitizer.php';
 
 /**
  * Logger — Centralized File-based Logging and Error Handler.
@@ -22,7 +24,8 @@ class Logger
             @mkdir(self::$logDir, 0755, true);
         }
 
-        $isProduction = (getenv('APP_ENV') === 'production');
+        $isProduction = SecurityConfig::isProductionLike();
+        ini_set('zend.exception_ignore_args', '1');
 
         // Configure PHP error reporting
         error_reporting(E_ALL);
@@ -63,6 +66,11 @@ class Logger
         self::write('INFO', $message, $context);
     }
 
+    public static function debug(string $message, array $context = []): void
+    {
+        if (!SecurityConfig::isProductionLike()) self::write('DEBUG', $message, $context);
+    }
+
     /**
      * Log a warning.
      */
@@ -79,12 +87,18 @@ class Logger
         self::write('ERROR', $message, $context);
     }
 
+    public static function critical(string $message, array $context = []): void
+    {
+        self::write('CRITICAL', $message, $context);
+    }
+
     /**
      * Log an exception with full trace.
      */
     public static function exception(Throwable $e, string $customMessage = ''): void
     {
-        $message = $customMessage !== '' ? $customMessage . ': ' . $e->getMessage() : $e->getMessage();
+        $detail = SecurityConfig::isProductionLike() ? get_class($e) : $e->getMessage();
+        $message = $customMessage !== '' ? $customMessage . ': ' . $detail : $detail;
         $context = [
             'exception' => get_class($e),
             'file' => $e->getFile(),
@@ -104,8 +118,10 @@ class Logger
         $isoTimestamp = $now->format('Y-m-d\TH:i:s.v\Z');
         $ip = self::getClientIp();
         $method = $_SERVER['REQUEST_METHOD'] ?? 'CLI';
-        $uri = $_SERVER['REQUEST_URI'] ?? '-';
-        $requestId = $_SERVER['HTTP_X_REQUEST_ID'] ?? null;
+        $uri = LogSanitizer::uri($_SERVER['REQUEST_URI'] ?? '-');
+        $requestId = LogSanitizer::requestId($_SERVER['HTTP_X_REQUEST_ID'] ?? null);
+        $message = LogSanitizer::text($message);
+        $context = LogSanitizer::context($context);
 
         $logEntry = [
             'timestamp'  => $isoTimestamp,
@@ -125,29 +141,21 @@ class Logger
             $logEntry['context'] = $context;
         }
 
-        $jsonLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        $jsonLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) . "\n";
 
         // Determine output channel: stdout, stderr, file, or dual (default)
         $channel = strtolower((string)(getenv('LOG_CHANNEL') ?: 'dual'));
+        if (!in_array($channel, ['stdout', 'stderr', 'file', 'dual'], true)) $channel = 'file';
 
         if ($channel === 'stdout' || $channel === 'dual') {
-            @file_put_contents('php://stdout', $jsonLine);
+            @file_put_contents(PHP_SAPI === 'cli' ? 'php://stdout' : 'php://stderr', $jsonLine);
         } elseif ($channel === 'stderr') {
             @file_put_contents('php://stderr', $jsonLine);
         }
 
         // File persistence (fallback or when file / dual logging enabled)
         if ($channel === 'file' || $channel === 'dual') {
-            $textSummary = sprintf("[%s] [%s] [%s] [%s %s] %s%s\n",
-                $isoTimestamp,
-                $level,
-                $ip,
-                $method,
-                $uri,
-                $message,
-                !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_SLASHES) : ''
-            );
-            @file_put_contents(self::getLogFilePath(), $textSummary, FILE_APPEND | LOCK_EX);
+            @file_put_contents(self::getLogFilePath(), $jsonLine, FILE_APPEND | LOCK_EX);
         }
     }
 
@@ -204,12 +212,16 @@ class Logger
      */
     private static function respondFatal(): void
     {
+        if (PHP_SAPI === 'cli') {
+            file_put_contents('php://stderr', "Command failed; inspect the application log.\n");
+            exit(1);
+        }
         if (headers_sent()) {
             exit;
         }
 
         http_response_code(500);
-        $isApi = (isset($_SERVER['REQUEST_URI']) && (str_contains($_SERVER['REQUEST_URI'], '/api') || str_contains($_SERVER['REQUEST_URI'], '/auth')));
+        $isApi = defined('TIL_API_REQUEST') || (isset($_SERVER['REQUEST_URI']) && (str_contains($_SERVER['REQUEST_URI'], '/api') || str_contains($_SERVER['REQUEST_URI'], '/auth')));
 
         if ($isApi) {
             header('Content-Type: application/json; charset=UTF-8');
@@ -219,7 +231,7 @@ class Logger
                 'message' => 'An unexpected server error occurred. Please try again later.'
             ], JSON_UNESCAPED_SLASHES);
         } else {
-            echo "<!DOCTYPE html><html><head><title>500 Server Error</title><style>body{font-family:sans-serif;padding:40px;text-align:center;color:#333;}</style></head><body><h1>Server Error</h1><p>We are experiencing technical difficulties. Our engineering team has been notified.</p></body></html>";
+            echo "<!DOCTYPE html><html><head><title>500 Server Error</title></head><body><h1>Server Error</h1><p>Please try again later.</p></body></html>";
         }
         exit;
     }

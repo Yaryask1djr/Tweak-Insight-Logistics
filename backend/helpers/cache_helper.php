@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/job_queue.php';
 
 /**
  * CacheHelper — Multi-tier cache manager (Redis with local in-memory/file fallback).
@@ -22,23 +23,9 @@ class CacheHelper
         }
         self::$redisChecked = true;
 
-        $host = getenv('REDIS_HOST');
-        if (!empty($host) && class_exists('Redis')) {
-            try {
-                $redis = new Redis();
-                $port = (int)(getenv('REDIS_PORT') ?: 6379);
-                $timeout = (float)(getenv('REDIS_TIMEOUT') ?: 0.2);
-                if ($redis->connect($host, $port, $timeout)) {
-                    $auth = getenv('REDIS_PASSWORD');
-                    if (!empty($auth)) {
-                        $redis->auth($auth);
-                    }
-                    self::$redis = $redis;
-                }
-            } catch (Throwable $e) {
-                self::$redis = null;
-            }
-        }
+        try {
+            if (getenv('REDIS_HOST') && class_exists('Redis')) self::$redis = JobQueue::redisConnection();
+        } catch (Throwable $e) { self::$redis = null; }
         return self::$redis;
     }
 

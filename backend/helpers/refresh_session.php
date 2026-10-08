@@ -6,6 +6,8 @@
  */
 require_once __DIR__ . '/monitoring.php';
 
+final class RefreshRotationConflict extends RuntimeException {}
+
 class RefreshSession
 {
     private const COOKIE_NAME = 'TIL_REFRESH';
@@ -19,9 +21,9 @@ class RefreshSession
 
     /**
      * Rotate the supplied refresh token and return the current account record.
-     * Re-use of any token that was already rotated or revoked is treated as theft
-     * and triggers automatic compromise defense: every active session and access
-     * JWT for that account is immediately invalidated.
+     * A same-browser rotation overlap receives a bounded conflict, never a token.
+     * Other reuse triggers compromise defense: every active session and access JWT
+     * for that account is immediately invalidated.
      */
     public static function rotate(PDO $db): array
     {
@@ -38,7 +40,7 @@ class RefreshSession
             $db->beginTransaction();
             $statement = $db->prepare(
                 'SELECT rs.id, rs.user_id, rs.family_id, rs.token_version, rs.expires_at,
-                        rs.revoked_at, rs.revoked_reason, u.role, u.full_name, u.email,
+                        rs.revoked_at, rs.revoked_reason, rs.user_agent_hash, u.role, u.full_name, u.email,
                         u.phone, u.is_approved, u.token_version AS current_token_version,
                         u.account_status
                  FROM auth_refresh_sessions rs
@@ -60,6 +62,13 @@ class RefreshSession
             // is presented again, an adversary has likely intercepted a previously used token.
             // Invalidate ALL active sessions for that user and increment token_version immediately.
             if ($session['revoked_at'] !== null) {
+                if (self::isRotationRace($session, $now->getTimestamp())) {
+                    $db->rollBack();
+                    Monitoring::authAnomaly('refresh_rotation_race', ['user_id' => (int)$session['user_id']]);
+                    // No token is issued, no cookie is cleared, and no grace period
+                    // is extended. The browser must retry using its newer cookie.
+                    throw new RefreshRotationConflict('A refresh rotation just completed in another request.');
+                }
                 self::invalidateAllSessionsInTransaction($db, (int)$session['user_id'], 'refresh_token_reuse');
                 $db->commit();
                 self::clearCookie();
@@ -78,7 +87,7 @@ class RefreshSession
                 throw new RuntimeException('Refresh token reuse detected. All sessions invalidated for security.');
             }
 
-            $expired = strtotime((string)$session['expires_at']) <= $now->getTimestamp();
+            $expired = strtotime((string)$session['expires_at'] . ' UTC') <= $now->getTimestamp();
             $versionChanged = (int)$session['token_version'] !== (int)$session['current_token_version'];
             $inactive = ($session['account_status'] ?? 'active') !== 'active';
 
@@ -118,6 +127,8 @@ class RefreshSession
             );
             $db->commit();
 
+            self::setCookie($newRefreshToken);
+
             return [
                 'id' => (int)$session['user_id'],
                 'role' => $session['role'],
@@ -132,7 +143,7 @@ class RefreshSession
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
-            self::clearCookie();
+            if (!$exception instanceof RefreshRotationConflict) self::clearCookie();
             throw $exception;
         }
     }
@@ -156,7 +167,7 @@ class RefreshSession
      */
     public static function assertBrowserRefreshRequest(): void
     {
-        // If an explicit non-cookie token is supplied in body/header, CSRF is not applicable.
+        // The refresh credential is accepted only from the HttpOnly cookie.
         $cookieUsed = isset($_COOKIE[self::COOKIE_NAME]);
         if (!$cookieUsed) {
             return;
@@ -164,7 +175,7 @@ class RefreshSession
 
         $origin = trim((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
         $requestedWith = strtolower(trim((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')));
-        if ($requestedWith !== 'xmlhttprequest' && ($origin === '' || !in_array($origin, self::allowedOrigins(), true))) {
+        if ($requestedWith !== 'xmlhttprequest' || ($origin !== '' && !in_array($origin, self::allowedOrigins(), true))) {
             throw new RuntimeException('Refresh request origin is not allowed.');
         }
     }
@@ -189,8 +200,20 @@ class RefreshSession
             self::clientIpBinary(),
             self::userAgentHash(),
         ]);
-        self::setCookie($token);
+        if (!$insideTransaction) self::setCookie($token);
         return $token;
+    }
+
+    /** Five seconds only, same browser agent, active account/version; never accepts an old token. */
+    public static function isRotationRace(array $session, int $now): bool
+    {
+        $age = $now - (int)strtotime((string)($session['revoked_at'] ?? '') . ' UTC');
+        $agent = self::userAgentHash();
+        return ($session['revoked_reason'] ?? '') === 'rotated' && $age >= 0 && $age <= 5
+            && $agent !== null && is_string($session['user_agent_hash'] ?? null) && hash_equals($session['user_agent_hash'], $agent)
+            && (int)$session['token_version'] === (int)$session['current_token_version']
+            && ($session['account_status'] ?? '') === 'active'
+            && strtotime((string)$session['expires_at'] . ' UTC') > $now;
     }
 
     private static function invalidateAllSessionsInTransaction(PDO $db, int $userId, string $reason): void

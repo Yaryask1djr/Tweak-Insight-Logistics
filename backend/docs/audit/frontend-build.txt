@@ -1,0 +1,45 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> frontend@1.0.0 build
+> react-scripts build
+
+(node:26) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Creating an optimized production build...
+Compiled successfully.
+
+File sizes after gzip:
+
+  109.67 kB         build/static/js/main.83779368.js
+  48.56 kB (-46 B)  build/static/css/main.2ca026b8.css
+  44.9 kB           build/static/js/854.862ebf92.chunk.js
+  28.64 kB          build/static/js/522.199b2641.chunk.js
+  24.88 kB          build/static/js/537.0c8c785a.chunk.js
+  19.81 kB          build/static/js/781.ca7379ef.chunk.js
+  6.7 kB            build/static/css/522.5fd70d23.chunk.css
+  6.7 kB            build/static/css/537.5fd70d23.chunk.css
+  6.34 kB           build/static/css/465.d6bfd15f.chunk.css
+  5.39 kB           build/static/js/465.08c63853.chunk.js
+  5.05 kB           build/static/js/422.5f776dfb.chunk.js
+  3.91 kB           build/static/js/391.87501de1.chunk.js
+  2.64 kB           build/static/js/193.af9dd53f.chunk.js
+  2.52 kB           build/static/js/930.01cf206a.chunk.js
+  2.51 kB           build/static/js/902.cd91b8dd.chunk.js
+  1.95 kB           build/static/js/442.5217031c.chunk.js
+  1.72 kB           build/static/js/688.6fe615d4.chunk.js
+  1.29 kB           build/static/js/866.3d7d6ecf.chunk.js
+  1.26 kB           build/static/js/777.ef5acd10.chunk.js
+  610 B             build/static/js/174.f2d5e666.chunk.js
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  npm install -g serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment

@@ -7,7 +7,7 @@ import QueryState from '../common/QueryState';
 import SensitiveValue from '../common/SensitiveValue';
 
 const ApprovalsTab = () => {
-    const [limit, setLimit] = useState(15);
+    const [limit] = useState(15);
     // Track which row has the reject reason input open + the reason text
     const [rejectingId, setRejectingId] = useState(null);
     const [rejectReason, setRejectReason] = useState('');

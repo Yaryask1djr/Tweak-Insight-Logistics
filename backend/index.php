@@ -102,7 +102,8 @@ function servePublicAsset(string $publicRoot, string $uri, string $method): bool
 }
 
 $publicRoot = realpath(__DIR__ . '/public');
-$spaIndex = $publicRoot ? $publicRoot . DIRECTORY_SEPARATOR . 'index.html' : false;
+require_once __DIR__ . '/helpers/frontend_release.php';
+$spaIndex = $publicRoot ? FrontendRelease::index($publicRoot) : false;
 if ($publicRoot && is_file($spaIndex)) {
     if (in_array($method, ['GET', 'HEAD'], true) && servePublicAsset($publicRoot, $uri, $method)) {
         exit;
@@ -110,7 +111,7 @@ if ($publicRoot && is_file($spaIndex)) {
 
     // A missing static resource must remain a 404. Returning index.html for a
     // stale /static/js/*.js request makes browsers reject HTML as JavaScript.
-    if (preg_match('#^/(?:static/|asset-manifest\.json$|manifest\.json$|robots\.txt$|favicon(?:-[0-9]+x[0-9]+)?\.(?:ico|png)$|logo(?:[0-9]+)?\.(?:png|webp)$)#i', $uri)) {
+    if (preg_match('#^/(?:releases/|static/|asset-manifest\.json$|manifest\.json$|robots\.txt$|favicon(?:-[0-9]+x[0-9]+)?\.(?:ico|png)$|logo(?:[0-9]+)?\.(?:png|webp)$)#i', $uri)) {
         header('Cache-Control: no-store, max-age=0');
         header('Content-Type: application/json; charset=UTF-8');
         http_response_code(404);

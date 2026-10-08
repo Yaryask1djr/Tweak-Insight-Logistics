@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/job_queue.php';
 
 require_once __DIR__ . '/client_ip.php';
 
@@ -22,6 +23,8 @@ class RateLimiter
      * 'window' = time window in seconds
      */
     private static array $limits = [
+        'payment_initialize' => ['max' => 10, 'window' => 60],
+        'payment_verify' => ['max' => 30, 'window' => 60],
         'login'    => ['max' => 5,  'window' => 900],   // 5 attempts per 15 min
         'register' => ['max' => 3,  'window' => 1800],  // 3 attempts per 30 min
         'refresh'  => ['max' => 30, 'window' => 900],   // rotation abuse guard
@@ -80,29 +83,8 @@ class RateLimiter
      */
     private static function incrementRedis(string $rateKey, int $windowSeconds): array
     {
-        if (!class_exists('Redis')) {
-            throw new RuntimeException('PHP Redis extension is not installed.');
-        }
-        $host = trim((string)getenv('REDIS_HOST'));
-        if ($host === '') {
-            throw new RuntimeException('REDIS_HOST is not configured.');
-        }
-
-        $redis = new Redis();
-        $port = (int)(getenv('REDIS_PORT') ?: 6379);
-        $timeout = (float)(getenv('REDIS_TIMEOUT') ?: 0.5);
-        if (!$redis->connect($host, $port, $timeout)) {
-            throw new RuntimeException('Unable to connect to Redis.');
-        }
+        $redis = JobQueue::redisConnection();
         try {
-            $password = getenv('REDIS_PASSWORD');
-            if ($password !== false && $password !== '' && !$redis->auth($password)) {
-                throw new RuntimeException('Redis authentication failed.');
-            }
-            $database = getenv('REDIS_DATABASE');
-            if ($database !== false && $database !== '' && !$redis->select((int)$database)) {
-                throw new RuntimeException('Redis database selection failed.');
-            }
 
             $prefix = (string)(getenv('REDIS_PREFIX') ?: 'til:');
             $result = $redis->eval(

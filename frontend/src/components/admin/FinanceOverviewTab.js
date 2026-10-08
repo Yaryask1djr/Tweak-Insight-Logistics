@@ -1,7 +1,7 @@
-﻿import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../api/client";
+import { responseItems } from "../../api/response";
 import { StatCardSkeleton } from "../common/SkeletonLoader";
-import Icon from "../common/Icon";
 
 const FinanceOverviewTab = ({ onNavigate }) => {
     const statsQuery = useQuery({
@@ -12,7 +12,7 @@ const FinanceOverviewTab = ({ onNavigate }) => {
 
     const deliveriesQuery = useQuery({
         queryKey: ["admin", "finance-deliveries"],
-        queryFn: () => apiGet("/admin/all-deliveries?limit=50").then(res => res.data?.deliveries || res.data?.data || []),
+        queryFn: () => apiGet("/admin/all-deliveries?limit=50").then(responseItems),
         staleTime: 30000,
     });
 
@@ -20,12 +20,9 @@ const FinanceOverviewTab = ({ onNavigate }) => {
     const deliveries = deliveriesQuery.data || [];
 
     const totalCollected = Number(stats.collected_revenue || 0);
-    const totalVolume = Number(stats.total_volume || 0);
-    const pendingReceivables = Math.max(0, totalVolume - totalCollected);
-
-    // Approximate partner disbursements based on 80% payout model
-    const partnerDisbursed = totalCollected * 0.8;
-    const partnerPending = pendingReceivables * 0.8;
+    const pendingReceivables = Number(stats.pending_receivables || 0);
+    const partnerDisbursed = Number(stats.partner_paid || 0);
+    const partnerPending = Number(stats.partner_pending || 0);
 
     const cards = [
         {
@@ -101,7 +98,7 @@ const FinanceOverviewTab = ({ onNavigate }) => {
 
             {/* Recent Transaction Log */}
             <div className="card border-0 shadow-sm custom-card p-4 mb-4">
-                <h5 className="fw-bold mb-3">Recent Transactions & Invoices</h5>
+                <h5 className="fw-bold mb-3">Recent Delivery Charges</h5>
                 {deliveriesQuery.isLoading ? (
                     <div className="text-muted py-3">Loading transactions…</div>
                 ) : deliveries.length === 0 ? (

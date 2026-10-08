@@ -1,67 +1,53 @@
-import React, { useState, useMemo } from 'react';
-import Icon from '../common/Icon';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiGet } from '../../api/client';
+import Pagination from '../common/Pagination';
+import { isPaidDelivery } from '../../utils/payments';
+import PaymentReviewPanel from '../common/PaymentReviewPanel';
 
 const ClientPaymentsTab = ({
     user,
-    deliveries = [],
-    loading = false,
     onBook
 }) => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedReceiptDelivery, setSelectedReceiptDelivery] = useState(null);
+    const [paymentDeliveryId, setPaymentDeliveryId] = useState(null);
 
-    // Compute financial metrics
-    const totalSpent = useMemo(() => {
-        return deliveries
-            .filter(d => d.payment_status === 'paid' || ['delivered', 'completed', 'in_transit', 'assigned'].includes(d.status))
-            .reduce((acc, d) => acc + (Number(d.total_cost) || 0), 0);
-    }, [deliveries]);
-
-    const paidDeliveries = useMemo(() => {
-        return deliveries.filter(d => (d.payment_status === 'paid') || ['delivered', 'completed'].includes(d.status));
-    }, [deliveries]);
-
-    const pendingPayments = useMemo(() => {
-        return deliveries.filter(d => d.payment_status === 'pending' && !['delivered', 'completed', 'cancelled'].includes(d.status));
-    }, [deliveries]);
-
-    const pendingAmount = useMemo(() => {
-        return pendingPayments.reduce((acc, d) => acc + (Number(d.total_cost) || 0), 0);
-    }, [pendingPayments]);
-
-    const avgCost = deliveries.length > 0 ? Math.round(totalSpent / deliveries.length) : 0;
-
-    // Filter and search
-    const filteredDeliveries = useMemo(() => {
-        return deliveries.filter(d => {
-            const isPaid = d.payment_status === 'paid' || ['delivered', 'completed'].includes(d.status);
-            if (statusFilter === 'paid' && !isPaid) return false;
-            if (statusFilter === 'pending' && isPaid) return false;
-
-            if (searchTerm.trim()) {
-                const q = searchTerm.toLowerCase().trim();
-                const matchRef = (d.tracking_number && d.tracking_number.toLowerCase().includes(q)) || String(d.id).includes(q);
-                const matchDesc = d.item_description && d.item_description.toLowerCase().includes(q);
-                const matchAddr = (d.delivery_address && d.delivery_address.toLowerCase().includes(q)) || (d.pickup_address && d.pickup_address.toLowerCase().includes(q));
-                if (!matchRef && !matchDesc && !matchAddr) return false;
-            }
-            return true;
-        });
-    }, [deliveries, statusFilter, searchTerm]);
+    const [page, setPage] = useState(1);
+    const [limit, setLimit] = useState(25);
+    const listing = useQuery({
+        queryKey: ['client', 'payments', user?.id, page, limit, statusFilter, searchTerm],
+        queryFn: ({ signal }) => apiGet(`/deliveries/my-requests?${new URLSearchParams({ page, limit, payment: statusFilter, search: searchTerm })}`, { signal }),
+    });
+    const summary = useQuery({
+        queryKey: ['client', 'payment-summary', user?.id],
+        queryFn: ({ signal }) => apiGet('/deliveries/payment-summary', { signal }),
+    });
+    const deliveries = listing.data?.data || [];
+    const filteredDeliveries = deliveries;
+    const totals = summary.data?.data || {};
+    const totalSpent = Number(totals.paid_amount || 0);
+    const pendingAmount = Number(totals.pending_amount || 0);
+    const paidCount = Number(totals.paid_count || 0);
+    const pendingCount = Number(totals.pending_count || 0);
+    const avgCost = paidCount ? Math.round(totalSpent / paidCount) : 0;
+    const loading = listing.isLoading || summary.isLoading;
 
     const handlePrintReceipt = () => {
         window.print();
     };
+
+    if (listing.isError || summary.isError) return <div role="alert" className="alert alert-danger">Payment records are unavailable. <button onClick={() => { listing.refetch(); summary.refetch(); }}>Retry</button></div>;
 
     return (
         <div className="client-payments-tab">
             {/* Header */}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
                 <div>
-                    <h4 className="fw-bold mb-1 text-dark">Payments & Receipts</h4>
+                    <h4 className="fw-bold mb-1 text-dark">Delivery Charges & Payment Status</h4>
                     <p className="text-muted small mb-0">
-                        Review delivery charges, payment records, and download official receipt vouchers
+                        Review all your shipment charges. Totals cover your account; search and filters apply to the list below.
                     </p>
                 </div>
                 <div className="d-flex align-items-center gap-2">
@@ -86,7 +72,7 @@ const ClientPaymentsTab = ({
                             ₦{totalSpent.toLocaleString()}
                         </div>
                         <small className="text-muted" style={{ fontSize: '0.8rem' }}>
-                            Across {paidDeliveries.length} completed transactions
+                            Across {paidCount} shipments marked paid
                         </small>
                     </div>
                 </div>
@@ -104,7 +90,7 @@ const ClientPaymentsTab = ({
                             ₦{pendingAmount.toLocaleString()}
                         </div>
                         <small className="text-muted" style={{ fontSize: '0.8rem' }}>
-                            {pendingPayments.length} order{pendingPayments.length === 1 ? '' : 's'} awaiting payment
+                            {pendingCount} order{pendingCount === 1 ? '' : 's'} awaiting payment
                         </small>
                     </div>
                 </div>
@@ -119,7 +105,7 @@ const ClientPaymentsTab = ({
                         </div>
                         <h6 className="text-muted small fw-bold mb-1 text-uppercase" style={{ letterSpacing: '0.5px' }}>Total Deliveries</h6>
                         <div className="display-6 fw-bold text-dark mb-1" style={{ fontSize: '1.6rem' }}>
-                            {deliveries.length}
+                            {Number(totals.total || 0)}
                         </div>
                         <small className="text-muted" style={{ fontSize: '0.8rem' }}>
                             Kano dispatch & courier requests
@@ -157,10 +143,10 @@ const ClientPaymentsTab = ({
                                 className="form-control"
                                 placeholder="Search by Tracking ID, item description, or destination..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                             />
                             {searchTerm && (
-                                <button className="btn btn-outline-secondary" onClick={() => setSearchTerm('')}>
+                                <button className="btn btn-outline-secondary" aria-label="Clear search" onClick={() => { setSearchTerm(''); setPage(1); }}>
                                     ✕
                                 </button>
                             )}
@@ -170,13 +156,13 @@ const ClientPaymentsTab = ({
                     <div className="col-md-6 d-flex justify-content-md-end gap-1">
                         {[
                             { id: 'all', label: 'All Transactions' },
-                            { id: 'paid', label: 'Paid & Settled' },
+                            { id: 'paid', label: 'Paid' },
                             { id: 'pending', label: 'Pending' }
                         ].map(tab => (
                             <button
                                 key={tab.id}
                                 className={`btn btn-sm ${statusFilter === tab.id ? 'btn-dark fw-semibold' : 'btn-outline-secondary'}`}
-                                onClick={() => setStatusFilter(tab.id)}
+                                onClick={() => { setStatusFilter(tab.id); setPage(1); }}
                             >
                                 {tab.label}
                             </button>
@@ -218,12 +204,12 @@ const ClientPaymentsTab = ({
                                         <th>Route</th>
                                         <th>Payment Status</th>
                                         <th>Fare</th>
-                                        <th className="text-end">Receipt</th>
+                                        <th className="text-end">Charge Summary</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredDeliveries.map(item => {
-                                        const isPaid = item.payment_status === 'paid' || ['delivered', 'completed'].includes(item.status);
+                                        const isPaid = isPaidDelivery(item);
                                         return (
                                             <tr key={item.id}>
                                                 <td className="small text-muted" style={{ whiteSpace: 'nowrap' }}>
@@ -256,7 +242,7 @@ const ClientPaymentsTab = ({
                                                         </span>
                                                     ) : (
                                                         <span className="badge bg-warning-subtle text-dark border border-warning-subtle px-2 py-1">
-                                                            Pending
+                                                            {item.payment_status || 'unpaid'}
                                                         </span>
                                                     )}
                                                 </td>
@@ -264,12 +250,13 @@ const ClientPaymentsTab = ({
                                                     ₦{Number(item.total_cost || 0).toLocaleString()}
                                                 </td>
                                                 <td className="text-end">
+                                                    <button className="btn btn-sm btn-primary me-2" onClick={() => setPaymentDeliveryId(item.id)}>Review &amp; pay</button>
                                                     <button
                                                         className="btn btn-sm btn-outline-secondary py-1 px-2 fw-semibold"
                                                         style={{ fontSize: '0.8rem' }}
                                                         onClick={() => setSelectedReceiptDelivery(item)}
                                                     >
-                                                        🧾 View Receipt
+                                                        🧾 View Charge
                                                     </button>
                                                 </td>
                                             </tr>
@@ -282,7 +269,7 @@ const ClientPaymentsTab = ({
                         {/* Mobile Cards */}
                         <div className="d-md-none d-flex flex-column gap-3">
                             {filteredDeliveries.map(item => {
-                                const isPaid = item.payment_status === 'paid' || ['delivered', 'completed'].includes(item.status);
+                                const isPaid = isPaidDelivery(item);
                                 return (
                                     <div key={item.id} className="p-3 border rounded bg-white shadow-sm">
                                         <div className="d-flex justify-content-between align-items-start mb-2">
@@ -295,7 +282,7 @@ const ClientPaymentsTab = ({
                                             {isPaid ? (
                                                 <span className="badge bg-success-subtle text-success border">Paid</span>
                                             ) : (
-                                                <span className="badge bg-warning-subtle text-dark border">Pending</span>
+                                                <span className="badge bg-warning-subtle text-dark border text-capitalize">{item.payment_status || 'unpaid'}</span>
                                             )}
                                         </div>
                                         <div className="small text-muted mb-2">
@@ -306,11 +293,12 @@ const ClientPaymentsTab = ({
                                             <span className="fw-bold text-dark">
                                                 ₦{Number(item.total_cost || 0).toLocaleString()}
                                             </span>
+                                            <button className="btn btn-sm btn-primary" onClick={() => setPaymentDeliveryId(item.id)}>Review &amp; pay</button>
                                             <button
                                                 className="btn btn-sm btn-outline-primary"
                                                 onClick={() => setSelectedReceiptDelivery(item)}
                                             >
-                                                Receipt →
+                                                View Charge →
                                             </button>
                                         </div>
                                     </div>
@@ -322,18 +310,19 @@ const ClientPaymentsTab = ({
             </div>
 
             {/* Receipt Modal */}
+            {paymentDeliveryId && <PaymentReviewPanel key={paymentDeliveryId} deliveryId={paymentDeliveryId} onClose={() => setPaymentDeliveryId(null)} />}
             {selectedReceiptDelivery && (
                 <div
                     className="modal show d-block app-modal-backdrop"
                     role="dialog"
                     aria-modal="true"
-                    aria-label="Delivery Receipt Voucher"
+                    aria-label="Delivery charge summary"
                 >
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content border-0 shadow-lg" style={{ borderRadius: '14px', overflow: 'hidden' }}>
                             <div className="modal-header bg-dark text-white px-4 py-3">
                                 <div>
-                                    <h5 className="modal-title fw-bold mb-0">Delivery Receipt Voucher</h5>
+                                    <h5 className="modal-title fw-bold mb-0">Delivery Charge Summary</h5>
                                     <small className="text-muted font-monospace">
                                         Ref: {selectedReceiptDelivery.tracking_number || `#${selectedReceiptDelivery.id}`}
                                     </small>
@@ -374,7 +363,7 @@ const ClientPaymentsTab = ({
                                     </div>
                                     <div className="col-6 mt-2 text-end">
                                         <span className="text-muted d-block">Status:</span>
-                                        <span className="badge bg-success text-white">Payment Confirmed</span>
+                                        <span className="badge bg-secondary text-white text-capitalize">{selectedReceiptDelivery.payment_status || 'unpaid'}</span>
                                     </div>
                                 </div>
 
@@ -408,16 +397,8 @@ const ClientPaymentsTab = ({
 
                                 {/* Fare Breakdown */}
                                 <div className="border-top pt-3">
-                                    <div className="d-flex justify-content-between small text-muted mb-1">
-                                        <span>Base Dispatch Charge</span>
-                                        <span>₦{Math.max(500, Math.round(Number(selectedReceiptDelivery.total_cost || 0) * 0.4)).toLocaleString()}</span>
-                                    </div>
-                                    <div className="d-flex justify-content-between small text-muted mb-2">
-                                        <span>Distance & Transit Fare</span>
-                                        <span>₦{Math.max(0, Math.round(Number(selectedReceiptDelivery.total_cost || 0) * 0.6)).toLocaleString()}</span>
-                                    </div>
                                     <div className="d-flex justify-content-between fs-5 fw-bold text-dark pt-2 border-top">
-                                        <span>Total Amount Paid</span>
+                                        <span>Total Delivery Charge</span>
                                         <span className="text-primary">₦{Number(selectedReceiptDelivery.total_cost || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
@@ -436,13 +417,14 @@ const ClientPaymentsTab = ({
                                     className="btn btn-primary btn-sm fw-semibold"
                                     onClick={handlePrintReceipt}
                                 >
-                                    🖨️ Print / Save Receipt
+                                    🖨️ Print / Save Summary
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+            <Pagination pagination={listing.data?.pagination} onPageChange={setPage} onLimitChange={value => { setLimit(value); setPage(1); }} />
         </div>
     );
 };

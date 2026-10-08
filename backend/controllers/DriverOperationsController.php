@@ -1,11 +1,13 @@
 <?php
 
 require_once __DIR__ . '/../helpers/response.php';
+require_once __DIR__ . '/../helpers/kyc_workflow.php';
 require_once __DIR__ . '/../helpers/operations_schema.php';
 require_once __DIR__ . '/../helpers/operational_records.php';
 require_once __DIR__ . '/../helpers/storage_adapter.php';
 require_once __DIR__ . '/../helpers/auth_middleware.php';
 require_once __DIR__ . '/../helpers/secure_document_download.php';
+require_once __DIR__ . '/../helpers/database_transaction.php';
 
 /** Driver KYC, availability, and document workflow. */
 final class DriverOperationsController
@@ -62,8 +64,20 @@ final class DriverOperationsController
         if ($zoneId && OperationsSchema::hasTable($db, 'service_zones')) { $zone = $db->prepare("SELECT id FROM service_zones WHERE id = ? AND city = 'Kano' AND is_active = 1"); $zone->execute([$zoneId]); if (!$zone->fetchColumn()) Response::error('Choose an active Kano service zone.', 422); }
         $latitude = isset($data->latitude) ? (float)$data->latitude : null; $longitude = isset($data->longitude) ? (float)$data->longitude : null;
         if (($latitude !== null && ($latitude < 11.85 || $latitude > 12.25)) || ($longitude !== null && ($longitude < 8.25 || $longitude > 8.85))) Response::error('Availability location is outside the Kano service area.', 422);
-        $update = $db->prepare('UPDATE driver_availability SET availability_status = ?, service_zone_id = COALESCE(?, service_zone_id), last_latitude = COALESCE(?, last_latitude), last_longitude = COALESCE(?, last_longitude), last_location_at = CASE WHEN ? IS NULL OR ? IS NULL THEN last_location_at ELSE NOW() END, available_since = CASE WHEN ? = \'available\' THEN COALESCE(available_since, NOW()) ELSE NULL END WHERE driver_id = ?');
-        $update->execute([$status, $zoneId, $latitude, $longitude, $latitude, $longitude, $status, $driverId]);
+        DatabaseTransaction::run($db, function (PDO $db) use ($status, $zoneId, $latitude, $longitude, $driverId, $userId) {
+            $lock = $db->prepare('SELECT availability_status FROM driver_availability WHERE driver_id = ? FOR UPDATE');
+            $lock->execute([$driverId]);
+            $current = $lock->fetchColumn();
+            $active = $db->prepare("SELECT COUNT(*) FROM deliveries WHERE delivery_person_id = ?
+                AND (status IN ('assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived')
+                    OR (pickup_time IS NOT NULL AND status NOT IN ('delivered', 'completed')))");
+            $active->execute([$userId]);
+            if ($current === false || $current === 'busy' || (int)$active->fetchColumn() > 0) {
+                DatabaseTransaction::fail('Finish or release your active assignment before changing availability.', 409);
+            }
+            $update = $db->prepare('UPDATE driver_availability SET availability_status = ?, service_zone_id = COALESCE(?, service_zone_id), last_latitude = COALESCE(?, last_latitude), last_longitude = COALESCE(?, last_longitude), last_location_at = CASE WHEN ? IS NULL OR ? IS NULL THEN last_location_at ELSE NOW() END, available_since = CASE WHEN ? = \'available\' THEN COALESCE(available_since, NOW()) ELSE NULL END WHERE driver_id = ?');
+            $update->execute([$status, $zoneId, $latitude, $longitude, $latitude, $longitude, $status, $driverId]);
+        });
         OperationalRecords::audit($db, $userId, 'delivery', 'driver.availability_changed', 'driver', $driverId, null, ['availability_status' => $status]);
         Response::json(['availability_status' => $status], 'Availability updated.');
     }
@@ -79,6 +93,8 @@ final class DriverOperationsController
         } catch (UploadSecurityException $exception) {
             Response::error($exception->getMessage(), $exception->httpStatus());
         }
+        try { $metadata = KycWorkflow::uploadMetadata($_POST); }
+        catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
         $file = $_FILES['document'];
         $mime = $upload['mime'];
 
@@ -104,21 +120,10 @@ final class DriverOperationsController
             Response::error('Secure document storage is temporarily unavailable. Please try again later.', 503);
         }
 
-        $expiresAt = trim((string)($_POST['expires_at'] ?? '')) ?: null;
-        if ($expiresAt !== null) {
-            $date = DateTimeImmutable::createFromFormat('!Y-m-d', $expiresAt);
-            if (!$date || $date->format('Y-m-d') !== $expiresAt || $date < new DateTimeImmutable('today')) {
-                Response::error('Expiry date must be today or later in YYYY-MM-DD format.', 422);
-            }
-        }
-        $number = trim((string)($_POST['document_number'] ?? '')) ?: null;
+
         try {
-            $db->beginTransaction();
-            $insert = $db->prepare("INSERT INTO driver_documents (driver_id, document_type, document_number, storage_key, expires_at, retention_until, verification_status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
-            $insert->execute([$driverId, $type, $number, $storageKey, $expiresAt, $retentionUntil]);
-            $documentId = (int)$db->lastInsertId();
-            $db->prepare("UPDATE drivers SET kyc_status = 'submitted', kyc_rejection_reason = NULL, kyc_reviewed_by = NULL, kyc_reviewed_at = NULL WHERE id = ? AND kyc_status <> 'verified'")->execute([$driverId]);
-            $db->commit();
+            $result = KycWorkflow::recordUpload($db, $userId, 'delivery', $type, $storageKey, $metadata, $retentionUntil);
+            $documentId = $result['document_id'];
         } catch (Throwable $exception) {
             if ($db->inTransaction()) $db->rollBack();
             try {
@@ -126,10 +131,10 @@ final class DriverOperationsController
             } catch (Throwable) {
                 // The scheduled retention/lifecycle policy remains a backstop if deletion is unavailable.
             }
+            if ($exception instanceof TransactionBusinessException) Response::error($exception->getMessage(), $exception->getStatusCode());
             Logger::error('Driver KYC document metadata could not be saved', ['exception' => $exception->getMessage()]);
             Response::serverError('Unable to save the document submission. Please try again.');
         }
-        OperationalRecords::audit($db, $userId, 'delivery', 'driver.document_submitted', 'driver_document', $documentId, null, ['document_type' => $type]);
         Response::json(['document_id' => $documentId, 'verification_status' => 'pending'], 'Document submitted for operations review.', 201);
     }
 

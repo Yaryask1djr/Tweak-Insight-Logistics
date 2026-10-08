@@ -74,7 +74,8 @@ function sendStaticCacheHeaders(string $filePath): void
 // React is the single frontend in the standard deployment. Its build is copied
 // to public/ by `npm run build:backend`; the API remains handled above.
 $publicRoot = realpath(__DIR__ . '/public');
-$spaIndex = $publicRoot . DIRECTORY_SEPARATOR . 'index.html';
+require_once __DIR__ . '/helpers/frontend_release.php';
+$spaIndex = FrontendRelease::index($publicRoot);
 if (is_file($spaIndex)) {
     $legacyRoutes = [
         '/index.php' => '/',
@@ -93,7 +94,7 @@ if (is_file($spaIndex)) {
     // Serve real build artefacts from public/. The local PHP command uses
     // backend/ as its document root, so `return false` would look in the
     // wrong directory instead of this public directory.
-    $requestedFile = realpath($publicRoot . DIRECTORY_SEPARATOR . ltrim($uri, '/'));
+    $requestedFile = realpath($uri === '/index.html' ? $spaIndex : $publicRoot . DIRECTORY_SEPARATOR . ltrim($uri, '/'));
     if ($requestedFile && str_starts_with($requestedFile, $publicRoot) && is_file($requestedFile)) {
         $mimeTypes = [
             'css' => 'text/css; charset=UTF-8',
@@ -121,6 +122,11 @@ if (is_file($spaIndex)) {
         }
     }
 
+    if (preg_match('#^/(?:static|releases)/#', $uri)) {
+        http_response_code(404);
+        header('Cache-Control: no-store');
+        exit;
+    }
     // BrowserRouter needs this fallback for /track, /dashboard, and other SPA routes.
     if (in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD'], true)) {
         header('Content-Type: text/html; charset=UTF-8');

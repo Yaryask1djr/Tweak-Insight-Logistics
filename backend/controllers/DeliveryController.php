@@ -10,6 +10,11 @@ require_once __DIR__ . '/../helpers/operations_schema.php';
 require_once __DIR__ . '/../helpers/auth_middleware.php';
 require_once __DIR__ . '/../helpers/database_transaction.php';
 require_once __DIR__ . '/../helpers/spatial_helper.php';
+require_once __DIR__ . '/../helpers/cursor_pagination.php';
+require_once __DIR__ . '/../helpers/delivery_booking.php';
+require_once __DIR__ . '/../helpers/booking_input.php';
+require_once __DIR__ . '/../helpers/booking_quote_inputs.php';
+require_once __DIR__ . '/../helpers/listing_query.php';
 
 class DeliveryController
 {
@@ -19,13 +24,17 @@ class DeliveryController
      */
     public static function calculatePrice(PDO $db): void
     {
-        $data = json_decode(file_get_contents("php://input"));
+        try {
+            $data = BookingInput::normalize(BookingInput::decode(file_get_contents('php://input', false, null, 0, 65537)), false);
+            $distance = self::resolveDistance($data);
+            $weight = self::resolveWeight($data);
+        } catch (TransactionBusinessException $error) {
+            Response::error($error->getMessage(), $error->getStatusCode());
+        }
 
         KanoServiceArea::assertCity($data->pickup_city ?? KanoServiceArea::city(), 'Pickup city');
         KanoServiceArea::assertCity($data->delivery_city ?? KanoServiceArea::city(), 'Delivery city');
 
-        $distance = self::resolveDistance($data);
-        $weight = self::resolveWeight($data);
         $quantity = max(1, (int)($data->item_quantity ?? $data->quantity ?? 1));
         $isFragile = !empty($data->is_fragile);
         $isPerishable = !empty($data->is_perishable);
@@ -58,134 +67,68 @@ class DeliveryController
      */
     public static function createDelivery(PDO $db, int $clientId): void
     {
-        // Server-side KYC gate — enforced independently of any frontend restriction.
-        // A client MUST be KYC-verified before creating a delivery request.
         AuthMiddleware::requireClientKyc($db, $clientId);
-
-        $data = json_decode(file_get_contents("php://input"));
-
+        $raw = file_get_contents('php://input', false, null, 0, 65537);
+        if ($raw === false || strlen($raw) > 65536) Response::error('Booking request is too large.', 413);
+        try {
+            $data = BookingInput::decode($raw);
+            $key = DeliveryBooking::validateKey($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? null);
+            $requestHash = DeliveryBooking::requestHash($data);
+            $data = BookingInput::normalize($data, true, false);
+        } catch (JsonException $error) {
+            Response::error('A valid JSON booking object is required.', 422);
+        } catch (TransactionBusinessException $error) {
+            Response::error($error->getMessage(), $error->getStatusCode());
+        }
         $required = [
             'pickup_address', 'pickup_contact_name', 'pickup_contact_phone',
-            'delivery_address', 'delivery_contact_name', 'delivery_contact_phone',
-            'item_description'
+            'delivery_address', 'delivery_contact_name', 'delivery_contact_phone', 'item_description',
         ];
-
         foreach ($required as $field) {
-            if (empty($data->$field)) {
-                Response::error("The field '{$field}' is required.");
+            if (!isset($data->$field) || !is_string($data->$field) || trim($data->$field) === '') {
+                Response::error("The field '{$field}' must be a non-empty string.", 422);
             }
         }
-
-        $pickupAddress = trim((string)$data->pickup_address);
-        $deliveryAddress = trim((string)$data->delivery_address);
-
+        $pickupAddress = trim($data->pickup_address);
+        $deliveryAddress = trim($data->delivery_address);
         KanoServiceArea::assertDelivery(
-            $data->pickup_city ?? KanoServiceArea::city(),
-            $data->delivery_city ?? KanoServiceArea::city(),
-            $pickupAddress,
-            $deliveryAddress
+            $data->pickup_city ?? KanoServiceArea::city(), $data->delivery_city ?? KanoServiceArea::city(),
+            $pickupAddress, $deliveryAddress
         );
-
         $data->pickup_address = $pickupAddress;
         $data->delivery_address = $deliveryAddress;
-
-        // Auto-resolve distance, weight, and geographic coordinates
-        $distance = self::resolveDistance($data);
-        $weight = self::resolveWeight($data);
-        $quantity = max(1, (int)($data->item_quantity ?? $data->quantity ?? 1));
-        $isFragile = !empty($data->is_fragile) ? 1 : 0;
-        $isPerishable = !empty($data->is_perishable) ? 1 : 0;
-        $itemCategory = !empty($data->item_category) ? trim((string)$data->item_category) : (!empty($data->package_size) ? trim((string)$data->package_size) : 'general');
-        [$pickupLat, $pickupLng, $deliveryLat, $deliveryLng] = self::resolveCoordinates($data);
-
         $serviceType = self::serviceType($data->service_type ?? 'same_day');
-        // Recalculate on the server. Browser-provided quote fields are never trusted.
-        [$pricing, $rateCardId] = self::rateCardPricing($db, $serviceType);
-        $quote = self::pricingBreakdown(
-            $pricing,
-            $distance,
-            $weight,
-            (bool)$isFragile,
-            (bool)$isPerishable,
-            $quantity
-        );
 
-        $otp = TrackerHelper::generateOTP();
-        $publicToken = TrackerHelper::generatePublicTrackingToken();
-        $officialTracking = TrackerHelper::generateTrackingNumber();
-
-        $stmt = $db->prepare("INSERT INTO deliveries (
-            tracking_number, public_tracking_token, client_id, pickup_address, pickup_city, pickup_contact_name, pickup_contact_phone,
-            delivery_address, delivery_city, delivery_contact_name, delivery_contact_phone, service_type,
-            item_description, item_category, item_quantity, item_weight, item_dimensions,
-            preferred_pickup_time, preferred_delivery_time, special_instructions,
-            is_fragile, is_perishable, distance_km, base_cost, weight_charge, fragile_charge, total_cost,
-            status, delivery_otp, payment_status,
-            pickup_latitude, pickup_longitude, delivery_latitude, delivery_longitude
-        ) VALUES (
-            ?, ?, ?, ?, 'Kano', ?, ?,
-            ?, 'Kano', ?, ?, ?,
-            ?, ?, ?, ?, ?,
-            ?, ?, ?,
-            ?, ?, ?, ?, ?, ?, ?,
-            'pending', ?, 'unpaid',
-            ?, ?, ?, ?
-        )");
-
-        $stmt->execute([
-            $officialTracking,
-            $publicToken,
-            $clientId,
-            trim($data->pickup_address),
-            trim($data->pickup_contact_name),
-            trim($data->pickup_contact_phone),
-            trim($data->delivery_address),
-            trim($data->delivery_contact_name),
-            trim($data->delivery_contact_phone),
-            $serviceType,
-            trim($data->item_description),
-            $itemCategory,
-            $quantity,
-            $weight,
-            $data->item_dimensions ?? '',
-            $data->preferred_pickup_time ?? null,
-            $data->preferred_delivery_time ?? null,
-            $data->special_instructions ?? '',
-            $isFragile,
-            $isPerishable,
-            $distance,
-            $quote['base_cost'] + $quote['distance_charge'],
-            $quote['weight_charge'],
-            $quote['fragile_charge'],
-            $quote['total_cost'],
-            $otp,
-            $pickupLat,
-            $pickupLng,
-            $deliveryLat,
-            $deliveryLng
-        ]);
-
-        $deliveryId = (int)$db->lastInsertId();
-        if ($rateCardId !== null) {
-            $priceQuote = $db->prepare("INSERT INTO delivery_price_quotes (delivery_id, rate_card_id, quote_status, distance_km, weight_kg, breakdown, total_amount, calculated_by) VALUES (?, ?, 'accepted', ?, ?, ?, ?, ?)");
-            $priceQuote->execute([$deliveryId, $rateCardId, $distance, $weight, json_encode($quote, JSON_THROW_ON_ERROR), $quote['total_cost'], $clientId]);
-        }
-
-        OperationalRecords::statusTransition($db, $deliveryId, null, 'pending', $clientId, 'client', null, [
-            'tracking_number' => $officialTracking,
-            'service_type' => $serviceType,
-        ]);
-        NotificationService::deliveryCreated($db, $deliveryId);
-
-        Response::json([
-            'delivery_id'          => $deliveryId,
-            'tracking_number'      => $officialTracking,
-            'public_tracking_token'=> $publicToken,
-            'status'               => 'pending',
-            'total_cost'           => $quote['total_cost'],
-            'delivery_otp'         => $otp, // Returned to client so recipient can confirm on delivery
-            'message'              => 'Delivery request submitted. Awaiting central operations review and dispatch.'
-        ], 'Delivery request created successfully.', 201);
+        $result = DatabaseTransaction::run($db, static function (PDO $db) use ($clientId, $key, $requestHash, $data, $serviceType): array {
+            return DeliveryBooking::apply($db, $clientId, $key, $requestHash, static function (PDO $db) use ($data, $serviceType): array {
+                $data = clone $data;
+                BookingInput::schedule($data);
+                $distance = self::resolveDistance($data);
+                $weight = self::resolveWeight($data);
+                $quantity = max(1, (int)($data->item_quantity ?? $data->quantity ?? 1));
+                $isFragile = !empty($data->is_fragile) ? 1 : 0;
+                $isPerishable = !empty($data->is_perishable) ? 1 : 0;
+                [$pickupLat, $pickupLng, $deliveryLat, $deliveryLng] = self::resolveCoordinates($data);
+                [$pricing, $rateCardId] = self::rateCardPricing($db, $serviceType);
+                $quote = self::pricingBreakdown($pricing, $distance, $weight, (bool)$isFragile, (bool)$isPerishable, $quantity);
+                return ['quote' => $quote, 'rate_card_id' => $rateCardId, 'fields' => [
+                    'pickup_address' => $data->pickup_address, 'pickup_city' => 'Kano',
+                    'pickup_contact_name' => trim($data->pickup_contact_name), 'pickup_contact_phone' => trim($data->pickup_contact_phone),
+                    'delivery_address' => $data->delivery_address, 'delivery_city' => 'Kano',
+                    'delivery_contact_name' => trim($data->delivery_contact_name), 'delivery_contact_phone' => trim($data->delivery_contact_phone),
+                    'service_type' => $serviceType, 'item_description' => trim($data->item_description),
+                    'item_category' => $data->item_category ?: $data->package_size,
+                    'item_quantity' => $quantity, 'item_weight' => $weight, 'item_dimensions' => $data->item_dimensions ?? '',
+                    'preferred_pickup_time' => $data->preferred_pickup_time ?? null, 'preferred_delivery_time' => $data->preferred_delivery_time ?? null,
+                    'special_instructions' => $data->special_instructions ?? '', 'is_fragile' => $isFragile, 'is_perishable' => $isPerishable,
+                    'distance_km' => $distance, 'base_cost' => $quote['base_cost'] + $quote['distance_charge'],
+                    'weight_charge' => $quote['weight_charge'], 'fragile_charge' => $quote['fragile_charge'], 'total_cost' => $quote['total_cost'],
+                    'pickup_latitude' => $pickupLat, 'pickup_longitude' => $pickupLng, 'delivery_latitude' => $deliveryLat, 'delivery_longitude' => $deliveryLng,
+                ]];
+            });
+        });
+        header('Idempotency-Replayed: ' . ($result['replayed'] ? 'true' : 'false'));
+        Response::json($result['data'], 'Delivery request created successfully.', 201);
     }
 
     /**
@@ -197,12 +140,27 @@ class DeliveryController
      */
     public static function getClientDeliveries(PDO $db, int $clientId): void
     {
-        $limit = max(1, min(100, (int)($_GET['limit'] ?? 10)));
+        try {
+            [$page, $limit, $offset] = ListingQuery::page($_GET);
+            $order = ListingQuery::order($_GET, ['newest' => 'd.id DESC', 'oldest' => 'd.id ASC', 'cost_desc' => 'd.total_cost DESC, d.id DESC', 'cost_asc' => 'd.total_cost ASC, d.id DESC', 'status' => 'd.status ASC, d.id DESC'], 'newest');
+        } catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
         $status = trim($_GET['status'] ?? 'all');
-        $cursor = isset($_GET['cursor']) ? (int)$_GET['cursor'] : null;
+        $cursor = CursorPagination::fromQuery($_GET);
+        if ($cursor !== null && ($_GET['sort'] ?? 'newest') !== 'newest') Response::error('Cursor mode supports newest-first ordering. Use page mode for other sorts.', 422);
 
         $whereClause = "WHERE d.client_id = :client_id";
         $params = ['client_id' => $clientId];
+
+        try { $search = ListingQuery::search($_GET); }
+        catch (TransactionBusinessException $e) { Response::error($e->getMessage(), $e->getStatusCode()); }
+        if ($search !== '') {
+            $whereClause .= ' AND (d.tracking_number LIKE :search_reference OR d.item_description LIKE :search_description OR d.pickup_address LIKE :search_pickup OR d.delivery_address LIKE :search_delivery)';
+            foreach (['reference','description','pickup','delivery'] as $field) $params['search_' . $field] = '%' . $search . '%';
+        }
+        $payment = $_GET['payment'] ?? 'all';
+        if ($payment === 'paid') $whereClause .= " AND d.payment_status = 'paid'";
+        elseif ($payment === 'pending') $whereClause .= " AND d.payment_status IN ('unpaid','pending') AND d.status NOT IN ('cancelled','rejected','failed')";
+        elseif ($payment !== 'all') Response::error('Unsupported payment filter.', 422);
 
         if ($status !== 'all' && !empty($status)) {
             $whereClause .= " AND d.status = :status";
@@ -223,8 +181,10 @@ class DeliveryController
 
         // Keyset (cursor) pagination — O(1) index seek regardless of depth
         if ($cursor !== null) {
-            $whereClause .= " AND d.id < :cursor";
-            $params['cursor'] = $cursor;
+            if ($cursor > 0) {
+                $whereClause .= " AND d.id < :cursor";
+                $params['cursor'] = $cursor;
+            }
 
             $sql = "SELECT {$columns}
                     FROM deliveries d
@@ -237,23 +197,22 @@ class DeliveryController
             foreach ($params as $key => $val) {
                 $stmt->bindValue(":{$key}", $val);
             }
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':limit', $limit + 1, PDO::PARAM_INT);
             $stmt->execute();
             $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $nextCursor = !empty($deliveries) ? (int)end($deliveries)['id'] : null;
+            $pageData = CursorPagination::page($deliveries, $limit);
 
             Response::json([
-                'deliveries'  => $deliveries,
-                'next_cursor' => $nextCursor,
-                'has_more'    => count($deliveries) === $limit,
+                'deliveries'  => $pageData['items'],
+                'next_cursor' => $pageData['next_cursor'],
+                'has_more'    => $pageData['has_more'],
             ], 'Client deliveries retrieved.');
             return;
         }
 
         // Traditional offset pagination (backward compatible)
-        $page = max(1, (int)($_GET['page'] ?? 1));
-        $offset = ($page - 1) * $limit;
+
 
         $countStmt = $db->prepare("SELECT COUNT(*) FROM deliveries d {$whereClause}");
         foreach ($params as $key => $val) {
@@ -266,7 +225,7 @@ class DeliveryController
                 FROM deliveries d
                 LEFT JOIN users u ON d.delivery_person_id = u.id
                 {$whereClause}
-                ORDER BY d.id DESC
+                ORDER BY {$order}
                 LIMIT :limit OFFSET :offset";
 
         $stmt = $db->prepare($sql);
@@ -309,7 +268,7 @@ class DeliveryController
 
         // Determine whether ref is a public_tracking_token (32 hex chars) or a tracking_number
         $isToken = (bool) preg_match('/^[0-9a-f]{32}$/', $ref);
-        $isTrackingNumber = (bool) preg_match('/^TIL-\d{4}-[A-Z0-9]+(-[A-Z0-9]+)?$/i', $ref);
+        $isTrackingNumber = (bool) preg_match('/^TIL-\d{4}-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/', $ref);
 
         if (!$isToken && !$isTrackingNumber) {
             Response::error('Invalid tracking reference format. Please provide a valid tracking number (e.g. TIL-2026-X8K9-M4PQ) or your 32-character tracking token.', 400);
@@ -338,7 +297,7 @@ class DeliveryController
         }
 
         // Always strip internal OTP and raw GPS coordinates from tracking lookup
-        unset($delivery['delivery_otp']);
+        unset($delivery['delivery_otp'], $delivery['otp_failed_attempts'], $delivery['otp_locked_until']);
         unset($delivery['last_location_latitude'], $delivery['last_location_longitude'], $delivery['last_location_accuracy_m']);
 
         // Check if the viewer is an authorized stakeholder (client owner, assigned driver, or admin)
@@ -388,38 +347,11 @@ class DeliveryController
         $delivery['in_transit_at'] = $inTransitTime;
         $delivery['delivered_at'] = $deliveredTime;
 
-        // For public / anonymous tracking queries, mask PII and omit internal financial and sequential ID data
+        // Anonymous tracking exposes progress and city-level locations only.
         if (!$isAuthorizedParty) {
-            unset(
-                $delivery['id'],
-                $delivery['client_id'],
-                $delivery['delivery_person_id'],
-                $delivery['pickup_hub_id'],
-                $delivery['delivery_hub_id'],
-                $delivery['business_account_id'],
-                $delivery['base_cost'],
-                $delivery['weight_charge'],
-                $delivery['fragile_charge'],
-                $delivery['total_cost'],
-                $delivery['payment_status'],
-                $delivery['special_instructions'],
-                $delivery['pickup_latitude'],
-                $delivery['pickup_longitude'],
-                $delivery['delivery_latitude'],
-                $delivery['delivery_longitude']
-            );
-
-            // Apply PII masking
-            $delivery['client_name'] = TrackerHelper::maskName($delivery['client_name'] ?? '');
-            $delivery['pickup_contact_name'] = TrackerHelper::maskName($delivery['pickup_contact_name'] ?? '');
-            $delivery['pickup_contact_phone'] = TrackerHelper::maskPhone($delivery['pickup_contact_phone'] ?? '');
-            $delivery['pickup_address'] = TrackerHelper::maskAddress($delivery['pickup_address'] ?? '');
-            $delivery['delivery_contact_name'] = TrackerHelper::maskName($delivery['delivery_contact_name'] ?? '');
-            $delivery['delivery_contact_phone'] = TrackerHelper::maskPhone($delivery['delivery_contact_phone'] ?? '');
-            $delivery['delivery_address'] = TrackerHelper::maskAddress($delivery['delivery_address'] ?? '');
-            $delivery['delivery_person_name'] = !empty($delivery['delivery_person_name']) ? TrackerHelper::maskName($delivery['delivery_person_name']) : null;
-            $delivery['delivery_person_phone'] = !empty($delivery['delivery_person_phone']) ? TrackerHelper::maskPhone($delivery['delivery_person_phone']) : null;
-            $delivery['is_verified_viewer'] = false;
+            // An allowlist protects new database columns automatically. Regex address
+            // masking cannot reliably remove landmarks, names, or nested plot numbers.
+            $delivery = TrackerHelper::publicView($delivery);
         } else {
             $delivery['is_verified_viewer'] = true;
         }
@@ -443,7 +375,7 @@ class DeliveryController
     }
 
     /**
-     * Recipient or Driver submits OTP to confirm delivery and trigger settlement
+     * Assigned driver records recipient OTP proof. Payment and payout are separate events.
      */
     public static function confirmReceipt(PDO $db, int $driverId): void
     {
@@ -456,79 +388,65 @@ class DeliveryController
 
         $deliveryId = (int)$data->delivery_id;
         $otp = trim((string)$data->otp);
+        if ($deliveryId < 1 || !preg_match('/^\d{6}$/D', $otp)) Response::error('A valid delivery ID and six-digit OTP are required.', 422);
+        OperationsSchema::requireTables($db, ['drivers', 'delivery_proofs', 'delivery_earnings']);
 
-        $stmt = $db->prepare("SELECT * FROM deliveries WHERE id = ?");
-        $stmt->execute([$deliveryId]);
-        $delivery = $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = DatabaseTransaction::run($db, function (PDO $db) use ($deliveryId, $driverId, $otp) {
+            // Lock before checking the OTP, attempt counter, ownership, or delivery state.
+            $stmt = $db->prepare("SELECT * FROM deliveries WHERE id = ? FOR UPDATE");
+            $stmt->execute([$deliveryId]);
+            $delivery = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$delivery) {
-            Response::error('Delivery record not found.', 404);
-        }
-
-        if (empty($delivery['delivery_person_id']) || (int)$delivery['delivery_person_id'] !== $driverId) {
-            Response::forbidden('Only the delivery partner assigned to this shipment can record confirmation.');
-        }
-
-        if ($delivery['status'] !== 'arrived') {
-            Response::error('Delivery confirmation is available only after an assigned driver has arrived at the destination.', 409);
-        }
-
-        if (in_array($delivery['status'], ['delivered', 'completed', 'cancelled', 'rejected', 'failed'], true)) {
-            Response::error("Delivery is already in '{$delivery['status']}' state.", 400);
-        }
-
-        // 1. Check if OTP confirmation is temporarily locked due to brute-force protection
-        if (!empty($delivery['otp_locked_until']) && strtotime($delivery['otp_locked_until']) > time()) {
-            $remainingSeconds = strtotime($delivery['otp_locked_until']) - time();
-            $remainingMinutes = (int)ceil($remainingSeconds / 60);
-            Response::error("OTP confirmation is temporarily locked due to too many failed attempts. Please try again in {$remainingMinutes} minute(s) or contact central operations.", 429);
-        }
-
-        // 2. Validate confirmation OTP with attempt counting and lockout
-        if ($delivery['delivery_otp'] !== $otp) {
-            $failedAttempts = ((int)($delivery['otp_failed_attempts'] ?? 0)) + 1;
-            $maxAttempts = 5;
-
-            if ($failedAttempts >= $maxAttempts) {
-                // Lock OTP confirmation for 30 minutes
-                $db->prepare("UPDATE deliveries SET otp_failed_attempts = ?, otp_locked_until = DATE_ADD(NOW(), INTERVAL 30 MINUTE) WHERE id = ?")
-                   ->execute([$failedAttempts, $deliveryId]);
-
-                OperationalRecords::audit($db, $driverId, 'delivery', 'delivery.otp_lockout_triggered', 'delivery', $deliveryId, null, [
-                    'failed_attempts' => $failedAttempts,
-                    'locked_for_minutes' => 30
-                ], [], $deliveryId);
-
-                NotificationService::publishToRole($db, 'admin', 'admin.delivery_otp_locked', 'Security Alert: Delivery OTP Locked', "Too many failed confirmation OTP attempts on delivery #{$delivery['tracking_number']}. Confirmation locked for 30 minutes.", $deliveryId);
-
-                Response::error('Too many incorrect OTP attempts. Delivery confirmation has been locked for 30 minutes. Please contact central operations support.', 429);
-            } else {
-                $db->prepare("UPDATE deliveries SET otp_failed_attempts = ? WHERE id = ?")
-                   ->execute([$failedAttempts, $deliveryId]);
-
-                $remaining = $maxAttempts - $failedAttempts;
-                Response::error("Invalid 6-digit confirmation OTP code. {$remaining} attempt(s) remaining before temporary lockout.", 400);
-            }
-        }
-
-        // 3. OTP verified successfully: Reset failed attempts & complete delivery with wallet disbursement
-        DatabaseTransaction::run($db, function(PDO $db) use ($deliveryId, $driverId, $delivery) {
-            // Lock the delivery row for settlement
-            $lockStmt = $db->prepare("SELECT id, status, delivery_person_id, total_cost FROM deliveries WHERE id = ? FOR UPDATE");
-            $lockStmt->execute([$deliveryId]);
-            $currentDelivery = $lockStmt->fetch(PDO::FETCH_ASSOC);
-
-            if (!$currentDelivery) {
+            if (!$delivery) {
                 DatabaseTransaction::fail('Delivery record not found.', 404);
             }
 
-            if ($currentDelivery['status'] !== 'arrived' || (int)$currentDelivery['delivery_person_id'] !== $driverId) {
-                DatabaseTransaction::fail('Delivery state or assigned driver changed before confirmation.', 409);
+            if (empty($delivery['delivery_person_id']) || (int)$delivery['delivery_person_id'] !== $driverId) {
+                DatabaseTransaction::fail('Only the delivery partner assigned to this shipment can record confirmation.', 403);
             }
+
+            if ($delivery['status'] !== 'arrived') {
+                DatabaseTransaction::fail('Delivery confirmation is available only after arrival at the destination.', 409);
+            }
+
+            // 1. Check if OTP confirmation is temporarily locked due to brute-force protection
+            if (!empty($delivery['otp_locked_until']) && strtotime($delivery['otp_locked_until']) > time()) {
+                $remainingSeconds = strtotime($delivery['otp_locked_until']) - time();
+                $remainingMinutes = (int)ceil($remainingSeconds / 60);
+                DatabaseTransaction::fail("OTP confirmation is locked. Try again in {$remainingMinutes} minute(s) or contact operations.", 429);
+            }
+
+            // 2. Validate confirmation OTP with attempt counting and lockout
+            if (!hash_equals((string)$delivery['delivery_otp'], $otp)) {
+                $failedAttempts = (!empty($delivery['otp_locked_until']) ? 0 : (int)($delivery['otp_failed_attempts'] ?? 0)) + 1;
+                $maxAttempts = 5;
+
+                if ($failedAttempts >= $maxAttempts) {
+                    // Lock OTP confirmation for 30 minutes
+                    $db->prepare("UPDATE deliveries SET otp_failed_attempts = ?, otp_locked_until = DATE_ADD(NOW(), INTERVAL 30 MINUTE) WHERE id = ?")
+                       ->execute([$failedAttempts, $deliveryId]);
+
+                    OperationalRecords::audit($db, $driverId, 'delivery', 'delivery.otp_lockout_triggered', 'delivery', $deliveryId, null, [
+                        'failed_attempts' => $failedAttempts,
+                        'locked_for_minutes' => 30
+                    ], [], $deliveryId);
+
+                    // Return normally to commit the failed-attempt counter before sending an error.
+                    return ['error' => 'Too many incorrect OTP attempts. Confirmation is locked for 30 minutes.', 'code' => 429, 'locked' => true];
+                } else {
+                    $db->prepare("UPDATE deliveries SET otp_failed_attempts = ?, otp_locked_until = NULL WHERE id = ?")
+                       ->execute([$failedAttempts, $deliveryId]);
+
+                    $remaining = $maxAttempts - $failedAttempts;
+                    return ['error' => "Invalid confirmation OTP. {$remaining} attempt(s) remain before lockout.", 'code' => 400];
+                }
+            }
+
+            // 3. Proof of delivery accrues an earning; it cannot confirm collection or disbursement of money.
+            $currentDelivery = $delivery;
 
             $update = $db->prepare("UPDATE deliveries SET 
                 status = 'delivered',
-                payment_status = 'paid',
                 delivery_time = NOW(),
                 otp_failed_attempts = 0,
                 otp_locked_until = NULL
@@ -538,20 +456,20 @@ class DeliveryController
                 DatabaseTransaction::fail('Delivery could not be confirmed because its state changed.', 409);
             }
 
-            OperationalRecords::statusTransition($db, $deliveryId, 'arrived', 'delivered', $driverId, 'delivery');
-            OperationalRecords::otpProofCaptured($db, $deliveryId, $driverId);
+            OperationalRecords::statusTransition($db, $deliveryId, 'arrived', 'delivered', $driverId, 'delivery', null, [], true);
+            OperationalRecords::otpProofCaptured($db, $deliveryId, $driverId, true);
             self::releaseDriverAvailabilityIfIdle($db, $driverId);
 
-            // Calculate and record driver earnings if driver assigned (wallet disbursement)
+            // Accrue a pending earning. A separate verified payout must settle it.
             if (!empty($currentDelivery['delivery_person_id'])) {
                 $pricing = self::pricingConfig();
                 $driverEarning = round((float)$currentDelivery['total_cost'] * (float)$pricing['driver_commission_pct'], 2);
                 
                 // Check if already recorded with pessimistic lock
-                $earnCheck = $db->prepare("SELECT id FROM delivery_earnings WHERE delivery_id = ? FOR UPDATE");
+                $earnCheck = $db->prepare("SELECT id FROM delivery_earnings WHERE delivery_id = ? AND earning_type = 'delivery_fee' FOR UPDATE");
                 $earnCheck->execute([$deliveryId]);
                 if (!$earnCheck->fetch()) {
-                    $earnInsert = $db->prepare("INSERT INTO delivery_earnings (delivery_person_id, delivery_id, amount, earning_type, status, paid_at) VALUES (?, ?, ?, 'delivery_fee', 'paid', NOW())");
+                    $earnInsert = $db->prepare("INSERT INTO delivery_earnings (delivery_person_id, delivery_id, amount, earning_type, status) VALUES (?, ?, ?, 'delivery_fee', 'pending')");
                     $earnInsert->execute([
                         $currentDelivery['delivery_person_id'],
                         $deliveryId,
@@ -559,16 +477,24 @@ class DeliveryController
                     ]);
                 }
             }
+            return ['tracking_number' => $delivery['tracking_number'], 'payment_status' => $delivery['payment_status']];
         }, 3);
 
+        if (isset($result['error'])) {
+            if (!empty($result['locked'])) {
+                NotificationService::publishToRole($db, 'admin', 'admin.delivery_otp_locked', 'Delivery OTP locked', "Delivery #{$deliveryId} was locked after repeated incorrect OTP attempts.", $deliveryId);
+            }
+            Response::error($result['error'], $result['code']);
+        }
         // Post-transaction notifications and response
-        NotificationService::deliveryStatusChanged($db, $deliveryId, 'arrived', 'delivered');
+        try { NotificationService::deliveryStatusChanged($db, $deliveryId, 'arrived', 'delivered'); }
+        catch (Throwable $exception) { Logger::exception($exception, 'Delivery committed; completion notification failed'); }
 
         Response::json([
             'delivery_id' => $deliveryId,
-            'tracking_number' => $delivery['tracking_number'],
+            'tracking_number' => $result['tracking_number'],
             'status' => 'delivered',
-            'payment_status' => 'paid',
+            'payment_status' => $result['payment_status'],
             'delivery_time' => date('Y-m-d H:i:s')
         ], 'Delivery confirmed successfully with digital proof of receipt.');
     }
@@ -614,7 +540,8 @@ class DeliveryController
             $pricing['service_surcharge'] = $serviceType === 'same_day' ? $number('same_day_surcharge', 0) : ($serviceType === 'scheduled' ? $number('scheduled_surcharge', 0) : 0);
             return [$pricing, (int)$cardId];
         } catch (Throwable $exception) {
-            return [$pricing, null];
+            // A failed rate-card query is an outage, not permission to charge fallback rates.
+            throw $exception;
         }
     }
 
@@ -627,10 +554,12 @@ class DeliveryController
     private static function releaseDriverAvailabilityIfIdle(PDO $db, int $userId): void
     {
         if (!OperationsSchema::hasTable($db, 'drivers') || !OperationsSchema::hasTable($db, 'driver_availability')) return;
-        $active = $db->prepare("SELECT COUNT(*) FROM deliveries WHERE delivery_person_id = ? AND status IN ('assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived')");
+        $driver = $db->prepare('SELECT id FROM drivers WHERE user_id = ? FOR UPDATE');
+        $driver->execute([$userId]);
+        $driverId = (int)$driver->fetchColumn();
+        $active = $db->prepare("SELECT id FROM deliveries WHERE delivery_person_id = ? AND (status IN ('assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived') OR (pickup_time IS NOT NULL AND status NOT IN ('delivered', 'completed'))) LIMIT 1 FOR UPDATE");
         $active->execute([$userId]);
         if ((int)$active->fetchColumn() !== 0) return;
-        $driverId = OperationsSchema::driverIdForUser($db, $userId);
         if ($driverId) $db->prepare("UPDATE driver_availability SET availability_status = 'available', available_since = NOW() WHERE driver_id = ? AND availability_status = 'busy'")->execute([$driverId]);
     }
 
@@ -643,6 +572,9 @@ class DeliveryController
         bool $isPerishable,
         int $quantity = 1
     ): array {
+        foreach ($pricing as $name => $value) {
+            if (!is_numeric($value) || !is_finite((float)$value) || $value < 0 || $value > 10000000) throw new RuntimeException('Invalid pricing rule: ' . $name);
+        }
         $baseCost = (float)$pricing['base_fare'];
         $distanceCharge = $distance > (float)$pricing['base_km']
             ? ($distance - (float)$pricing['base_km']) * (float)$pricing['per_km_rate']
@@ -657,7 +589,14 @@ class DeliveryController
 
         $total = $baseCost + $distanceCharge + $weightCharge + $fragileCharge + $perishableCharge + $serviceCharge + $quantityCharge;
 
+        foreach ([$baseCost, $distanceCharge, $weightCharge, $fragileCharge, $perishableCharge, $serviceCharge, $quantityCharge, $total] as $amount) {
+            if (!is_finite($amount) || $amount < 0 || $amount > 10000000) throw new RuntimeException('Pricing configuration is outside supported bounds.');
+        }
+
         return [
+            'is_provisional' => true,
+            'distance_source' => 'coordinate_estimate',
+            'requires_operations_review' => true,
             'base_cost' => round($baseCost, 2),
             'distance_charge' => round($distanceCharge, 2),
             'weight_charge' => round($weightCharge, 2),
@@ -669,101 +608,7 @@ class DeliveryController
         ];
     }
 
-    /**
-     * Resolves geographic coordinates from payload or address landmark recognition.
-     */
-    public static function resolveCoordinates(mixed $data): array
-    {
-        $pLat = isset($data->pickup_latitude) ? (float)$data->pickup_latitude : (isset($data->pickup_lat) ? (float)$data->pickup_lat : null);
-        $pLng = isset($data->pickup_longitude) ? (float)$data->pickup_longitude : (isset($data->pickup_lng) ? (float)$data->pickup_lng : null);
-        $dLat = isset($data->delivery_latitude) ? (float)$data->delivery_latitude : (isset($data->delivery_lat) ? (float)$data->delivery_lat : null);
-        $dLng = isset($data->delivery_longitude) ? (float)$data->delivery_longitude : (isset($data->delivery_lng) ? (float)$data->delivery_lng : null);
-
-        $hubCoords = [
-            'sabon gari'   => ['lat' => 12.0022, 'lng' => 8.5385],
-            'kantin kwari' => ['lat' => 11.9961, 'lng' => 8.5274],
-            'farm centre'  => ['lat' => 11.9752, 'lng' => 8.5492],
-            'challawa'     => ['lat' => 11.8954, 'lng' => 8.4821],
-            'bompai'       => ['lat' => 12.0150, 'lng' => 8.5550],
-            'buk'          => ['lat' => 11.9780, 'lng' => 8.4230],
-            'sharada'      => ['lat' => 11.9650, 'lng' => 8.4950],
-            'dawanau'      => ['lat' => 12.0850, 'lng' => 8.4450],
-            'nasarawa'     => ['lat' => 11.9890, 'lng' => 8.5520],
-            'hotoro'       => ['lat' => 11.9610, 'lng' => 8.5830],
-            'trade fair'   => ['lat' => 11.9950, 'lng' => 8.5450],
-            'zoo road'     => ['lat' => 11.9730, 'lng' => 8.5250],
-            'tarauni'      => ['lat' => 11.9680, 'lng' => 8.5420],
-            'fagge'        => ['lat' => 12.0100, 'lng' => 8.5250],
-        ];
-
-        $pAddr = strtolower((string)($data->pickup_address ?? ''));
-        $dAddr = strtolower((string)($data->delivery_address ?? ''));
-
-        if (($pLat === null || $pLat == 0) && $pAddr !== '') {
-            foreach ($hubCoords as $key => $coords) {
-                if (str_contains($pAddr, $key)) {
-                    $pLat = $coords['lat'];
-                    $pLng = $coords['lng'];
-                    break;
-                }
-            }
-        }
-
-        if (($dLat === null || $dLat == 0) && $dAddr !== '') {
-            foreach ($hubCoords as $key => $coords) {
-                if (str_contains($dAddr, $key)) {
-                    $dLat = $coords['lat'];
-                    $dLng = $coords['lng'];
-                    break;
-                }
-            }
-        }
-
-        return [$pLat, $pLng, $dLat, $dLng];
-    }
-
-    /**
-     * Resolves trip distance automatically from coordinates or fallback address logic.
-     */
-    public static function resolveDistance(mixed $data): float
-    {
-        $explicitDist = isset($data->distance_km) ? (float)$data->distance_km : 0.0;
-
-        [$pLat, $pLng, $dLat, $dLng] = self::resolveCoordinates($data);
-
-        if ($pLat !== null && $pLng !== null && $dLat !== null && $dLng !== null && $pLat > 0 && $dLat > 0) {
-            $meters = SpatialHelper::haversineDistanceMeters($pLat, $pLng, $dLat, $dLng);
-            $km = ($meters * 1.25) / 1000.0;
-            return max(1.5, round($km, 1));
-        }
-
-        if ($explicitDist > 0) {
-            return max(0.5, $explicitDist);
-        }
-
-        return 6.5;
-    }
-
-    /**
-     * Resolves package weight in kg without forcing client input.
-     */
-    public static function resolveWeight(mixed $data): float
-    {
-        if (!empty($data->weight_kg) && (float)$data->weight_kg > 0) {
-            return max(0.1, (float)$data->weight_kg);
-        }
-        if (!empty($data->item_weight) && (float)$data->item_weight > 0) {
-            return max(0.1, (float)$data->item_weight);
-        }
-
-        $size = strtolower(trim((string)($data->package_size ?? $data->item_category ?? '')));
-        if ($size === 'envelope' || str_contains($size, 'envelope') || str_contains($size, 'doc')) {
-            return 0.5;
-        }
-        if ($size === 'large_package' || $size === 'heavy_cargo' || str_contains($size, 'large') || str_contains($size, 'heavy')) {
-            return 10.0;
-        }
-
-        return 2.5;
-    }
+    public static function resolveCoordinates(mixed $data): array { return BookingQuoteInputs::resolveCoordinates($data); }
+    public static function resolveDistance(mixed $data): float { return BookingQuoteInputs::resolveDistance($data); }
+    public static function resolveWeight(mixed $data): float { return BookingQuoteInputs::resolveWeight($data); }
 }

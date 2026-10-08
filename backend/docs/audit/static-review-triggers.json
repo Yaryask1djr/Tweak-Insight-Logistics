@@ -1,0 +1,797 @@
+[
+  {
+    "path": "backend/api/index.php",
+    "line": 277,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/api/index.php",
+    "line": 286,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 329,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 378,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 452,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 495,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 670,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 350,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 353,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 437,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 483,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 485,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 528,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 45,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 106,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 122,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 285,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 320,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 424,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 565,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 711,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/AdminController.php",
+    "line": 750,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/ClientKycController.php",
+    "line": 128,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/ClientKycController.php",
+    "line": 148,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/ClientKycController.php",
+    "line": 33,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DeliveryController.php",
+    "line": 383,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/DeliveryController.php",
+    "line": 429,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DeliveryController.php",
+    "line": 459,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DeliveryController.php",
+    "line": 202,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DeliveryController.php",
+    "line": 238,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DeliveryController.php",
+    "line": 530,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DeliveryPersonController.php",
+    "line": 76,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/DeliveryPersonController.php",
+    "line": 268,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/DeliveryPersonController.php",
+    "line": 166,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DeliveryPersonController.php",
+    "line": 55,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DeliveryPersonController.php",
+    "line": 229,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DeliveryPersonController.php",
+    "line": 358,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 40,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 51,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 172,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 185,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 43,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 81,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 158,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 178,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 189,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 31,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/DriverOperationsController.php",
+    "line": 33,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/LiveTrackingController.php",
+    "line": 148,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 155,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 59,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 125,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 150,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 40,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 78,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 83,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/OperationsManagementController.php",
+    "line": 136,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/controllers/ReportingController.php",
+    "line": 41,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/account_registration.php",
+    "line": 42,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/delivery_booking.php",
+    "line": 117,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/delivery_booking.php",
+    "line": 21,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/delivery_payments.php",
+    "line": 47,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/delivery_payments.php",
+    "line": 72,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/delivery_payments.php",
+    "line": 147,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/delivery_payments.php",
+    "line": 191,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/delivery_payments.php",
+    "line": 228,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/delivery_payments.php",
+    "line": 278,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/delivery_resolution.php",
+    "line": 81,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/delivery_resolution.php",
+    "line": 45,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/driver_delivery_progress.php",
+    "line": 94,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/driver_delivery_progress.php",
+    "line": 114,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/frontend_release.php",
+    "line": 10,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/helpers/job_queue.php",
+    "line": 311,
+    "review_trigger": "html-or-dynamic-execution"
+  },
+  {
+    "path": "backend/helpers/job_queue.php",
+    "line": 59,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/kyc_workflow.php",
+    "line": 48,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/kyc_workflow.php",
+    "line": 76,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/kyc_workflow.php",
+    "line": 109,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/kyc_workflow.php",
+    "line": 133,
+    "review_trigger": "best-effort-audit-call"
+  },
+  {
+    "path": "backend/helpers/kyc_workflow.php",
+    "line": 63,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/kyc_workflow.php",
+    "line": 94,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/notification_inbox.php",
+    "line": 26,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/operations_schema.php",
+    "line": 17,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/rate_limiter.php",
+    "line": 90,
+    "review_trigger": "html-or-dynamic-execution"
+  },
+  {
+    "path": "backend/helpers/report_export.php",
+    "line": 118,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/helpers/security_config.php",
+    "line": 38,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "backend/helpers/security_config.php",
+    "line": 65,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "backend/helpers/security_config.php",
+    "line": 91,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "backend/helpers/transactional_schema.php",
+    "line": 12,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/scripts/ensure_worker_running.php",
+    "line": 24,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "backend/scripts/migrate_job_queue_reservations.php",
+    "line": 37,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/scripts/migrate_job_queue_reservations.php",
+    "line": 44,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/scripts/migrate_operational_architecture.php",
+    "line": 315,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/scripts/migrate_performance_indexes.php",
+    "line": 34,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/scripts/purge_expired_kyc_documents.php",
+    "line": 24,
+    "review_trigger": "unbounded-fetch-review"
+  },
+  {
+    "path": "backend/scripts/queue_worker.php",
+    "line": 72,
+    "review_trigger": "raw-json-input"
+  },
+  {
+    "path": "frontend/src/components/DeliveryPersonDashboard.js",
+    "line": 71,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/components/DeliveryPersonDashboard.js",
+    "line": 75,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/components/Login.js",
+    "line": 84,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/Login.js",
+    "line": 99,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterClient.js",
+    "line": 81,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterClient.js",
+    "line": 86,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterClient.js",
+    "line": 91,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterClient.js",
+    "line": 96,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterClient.js",
+    "line": 101,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterDelivery.js",
+    "line": 85,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterDelivery.js",
+    "line": 90,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterDelivery.js",
+    "line": 95,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterDelivery.js",
+    "line": 100,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/RegisterDelivery.js",
+    "line": 105,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/ThemeContext.js",
+    "line": 8,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/components/ThemeContext.js",
+    "line": 19,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/components/admin/ApprovalsTab.js",
+    "line": 155,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/AuditTab.js",
+    "line": 62,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/AuditTab.js",
+    "line": 83,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/ClientKycTab.js",
+    "line": 252,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/DeliveriesTab.js",
+    "line": 33,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/components/admin/DeliveriesTab.js",
+    "line": 112,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/components/admin/DeliveriesTab.js",
+    "line": 305,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/DeliveriesTab.js",
+    "line": 358,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/DocumentReviewTab.js",
+    "line": 546,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/ExceptionsAlertsTab.js",
+    "line": 254,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/OperationsTabs.js",
+    "line": 193,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/OperationsTabs.js",
+    "line": 363,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/OperationsTabs.js",
+    "line": 378,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/OperationsTabs.js",
+    "line": 551,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/OperationsTabs.js",
+    "line": 560,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/OperationsTabs.js",
+    "line": 568,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/admin/OperationsTabs.js",
+    "line": 577,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/BookDeliveryTab.js",
+    "line": 302,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/BookDeliveryTab.js",
+    "line": 356,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/BookDeliveryTab.js",
+    "line": 389,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/BookDeliveryTab.js",
+    "line": 400,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/BookDeliveryTab.js",
+    "line": 486,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/BookDeliveryTab.js",
+    "line": 555,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ClientKycTab.js",
+    "line": 107,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ClientKycTab.js",
+    "line": 108,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ClientKycTab.js",
+    "line": 109,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ClientKycTab.js",
+    "line": 110,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ClientOverviewTab.js",
+    "line": 267,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ClientPaymentsTab.js",
+    "line": 144,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ClientTrackingTab.js",
+    "line": 167,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/client/ShipmentHistoryTab.js",
+    "line": 163,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/common/NotificationInbox.js",
+    "line": 51,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/ActiveDeliveriesTab.js",
+    "line": 161,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/ActiveDeliveriesTab.js",
+    "line": 503,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/AvailableJobsTab.js",
+    "line": 213,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/DriverPerformanceTab.js",
+    "line": 64,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/DriverPerformanceTab.js",
+    "line": 65,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/DriverPerformanceTab.js",
+    "line": 66,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/DriverPerformanceTab.js",
+    "line": 67,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/PartnerOperationsTab.js",
+    "line": 281,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/PartnerOperationsTab.js",
+    "line": 290,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/PartnerOperationsTab.js",
+    "line": 302,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/driver/PartnerOperationsTab.js",
+    "line": 364,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/landing/TrackingWidget.js",
+    "line": 197,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/components/landing/TrackingWidget.js",
+    "line": 226,
+    "review_trigger": "placeholder-implementation"
+  },
+  {
+    "path": "frontend/src/utils/bookingRequest.js",
+    "line": 16,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/utils/bookingRequest.js",
+    "line": 21,
+    "review_trigger": "local-browser-storage"
+  },
+  {
+    "path": "frontend/src/utils/bookingRequest.js",
+    "line": 23,
+    "review_trigger": "local-browser-storage"
+  }
+]

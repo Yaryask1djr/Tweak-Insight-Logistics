@@ -339,6 +339,49 @@ CREATE TABLE IF NOT EXISTS deliveries (
     INDEX idx_deliveries_payment_status (payment_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Retained scoped request keys: do not expire them while their delivery exists.
+CREATE TABLE IF NOT EXISTS booking_requests (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    client_id INT UNSIGNED NOT NULL,
+    operation VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    key_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    request_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    delivery_id BIGINT UNSIGNED NULL,
+    response_json JSON NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_booking_request_scope (client_id, operation, key_hash),
+    UNIQUE KEY uq_booking_request_delivery (delivery_id),
+    CONSTRAINT fk_booking_request_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_booking_request_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Immutable original booking facts, separate from mutable operational tables.
+-- The booking migration installs UPDATE/DELETE rejection triggers as well.
+CREATE TABLE IF NOT EXISTS delivery_booking_snapshots (
+    delivery_id BIGINT UNSIGNED PRIMARY KEY,
+    snapshot_json JSON NOT NULL,
+    snapshot_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_booking_snapshot_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS booking_outbox (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    delivery_id BIGINT UNSIGNED NOT NULL,
+    event_type VARCHAR(80) NOT NULL,
+    payload JSON NOT NULL,
+    status ENUM('pending', 'processed', 'failed') NOT NULL DEFAULT 'pending',
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    available_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME NULL,
+    last_error VARCHAR(500) NULL,
+    external_delivery_status ENUM('unconfigured', 'pending', 'sent', 'failed') NOT NULL DEFAULT 'unconfigured',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_booking_outbox_event (delivery_id, event_type),
+    INDEX idx_booking_outbox_due (status, available_at, id),
+    CONSTRAINT fk_booking_outbox_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS delivery_items (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     delivery_id BIGINT UNSIGNED NOT NULL,
@@ -373,6 +416,88 @@ CREATE TABLE IF NOT EXISTS delivery_price_quotes (
     CONSTRAINT fk_delivery_price_quotes_user FOREIGN KEY (calculated_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_delivery_price_quotes_delivery_status (delivery_id, quote_status),
     INDEX idx_delivery_price_quotes_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Approval and receipt facts are append-only; migration installs immutable-row triggers.
+CREATE TABLE IF NOT EXISTS delivery_fare_approvals (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    delivery_id BIGINT UNSIGNED NOT NULL,
+    version INT UNSIGNED NOT NULL,
+    amount_minor BIGINT UNSIGNED NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'NGN',
+    input_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    approved_by INT UNSIGNED NOT NULL,
+    approval_reason VARCHAR(500) NOT NULL,
+    approved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_delivery_fare_version (delivery_id, version),
+    CONSTRAINT fk_fare_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_fare_approver FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS delivery_payment_attempts (
+    id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    reference VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+    delivery_id BIGINT UNSIGNED NOT NULL,
+    client_id INT UNSIGNED NOT NULL,
+    fare_approval_id BIGINT UNSIGNED NOT NULL,
+    provider VARCHAR(20) NOT NULL DEFAULT 'paystack',
+    environment ENUM('test', 'live') NOT NULL,
+    amount_minor BIGINT UNSIGNED NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'NGN',
+    payer_email VARCHAR(255) NOT NULL,
+    status ENUM('created', 'initializing', 'pending', 'verified', 'review_required') NOT NULL DEFAULT 'created',
+    authorization_url VARCHAR(500) NULL,
+    initialization_token CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    initializing_until DATETIME NULL,
+    last_provider_status VARCHAR(30) NULL,
+    attention_reason VARCHAR(80) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_payment_fare_environment (fare_approval_id, environment),
+    INDEX idx_payment_delivery (delivery_id, created_at),
+    CONSTRAINT fk_payment_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_payment_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_payment_fare FOREIGN KEY (fare_approval_id) REFERENCES delivery_fare_approvals(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS delivery_payment_receipts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    attempt_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+    delivery_id BIGINT UNSIGNED NOT NULL,
+    fare_approval_id BIGINT UNSIGNED NOT NULL,
+    client_id INT UNSIGNED NOT NULL,
+    provider VARCHAR(20) NOT NULL DEFAULT 'paystack',
+    environment ENUM('test', 'live') NOT NULL,
+    reference VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+    provider_transaction_id VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    amount_minor BIGINT UNSIGNED NOT NULL,
+    currency CHAR(3) NOT NULL,
+    provider_paid_at DATETIME NOT NULL,
+    verified_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    evidence_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    UNIQUE KEY uq_provider_transaction (provider, environment, provider_transaction_id),
+    INDEX idx_receipt_delivery (delivery_id, verified_at),
+    CONSTRAINT fk_receipt_attempt FOREIGN KEY (attempt_id) REFERENCES delivery_payment_attempts(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_receipt_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_receipt_fare FOREIGN KEY (fare_approval_id) REFERENCES delivery_fare_approvals(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_receipt_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payment_webhook_events (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    event_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+    attempt_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    event_type VARCHAR(60) NOT NULL,
+    status ENUM('pending', 'processing', 'processed', 'failed') NOT NULL DEFAULT 'pending',
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    reservation_token CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    reserved_until DATETIME NULL,
+    available_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_error VARCHAR(150) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME NULL,
+    INDEX idx_payment_webhook_due (status, available_at, id),
+    CONSTRAINT fk_webhook_attempt FOREIGN KEY (attempt_id) REFERENCES delivery_payment_attempts(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Each broadcast is materialized per eligible driver. The atomic acceptance
@@ -539,6 +664,28 @@ CREATE TABLE IF NOT EXISTS rate_limit_buckets (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Asynchronous background job queue table
+CREATE TABLE IF NOT EXISTS report_exports (
+    id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+    owner_user_id INT UNSIGNED NOT NULL,
+    report_kind ENUM('audit', 'deliveries') NOT NULL,
+    filters JSON NOT NULL,
+    upper_id BIGINT UNSIGNED NOT NULL,
+    status ENUM('pending', 'processing', 'ready', 'failed', 'expired') NOT NULL DEFAULT 'pending',
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    reservation_token CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    reserved_until DATETIME NULL,
+    file_name VARCHAR(100) NULL,
+    row_count BIGINT UNSIGNED NULL,
+    error_message VARCHAR(255) NULL,
+    expires_at DATETIME NOT NULL,
+    completed_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_report_export_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE RESTRICT,
+    INDEX idx_report_export_work (status, reserved_until, created_at),
+    INDEX idx_report_export_expiry (expires_at),
+    INDEX idx_report_export_owner (owner_user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS job_queue (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     queue_name VARCHAR(60) NOT NULL DEFAULT 'default',
@@ -549,9 +696,12 @@ CREATE TABLE IF NOT EXISTS job_queue (
     max_attempts INT UNSIGNED NOT NULL DEFAULT 3,
     available_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     reserved_at DATETIME NULL,
+    reservation_token CHAR(48) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    reserved_until DATETIME(6) NULL,
     completed_at DATETIME NULL,
     failed_at DATETIME NULL,
     error_message TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_job_status_available (queue_name, status, available_at)
+    INDEX idx_job_status_available (queue_name, status, available_at),
+    INDEX idx_job_reservation_expiry (queue_name, status, reserved_until)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

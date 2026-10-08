@@ -9,6 +9,7 @@ require_once __DIR__ . '/../helpers/operations_schema.php';
 require_once __DIR__ . '/../helpers/notification_service.php';
 require_once __DIR__ . '/../helpers/cache_helper.php';
 require_once __DIR__ . '/../helpers/database_transaction.php';
+require_once __DIR__ . '/../helpers/driver_delivery_progress.php';
 
 class DeliveryPersonController
 {
@@ -35,12 +36,12 @@ class DeliveryPersonController
         $countStmt->execute([$driverId]);
         $totalCount = (int)$countStmt->fetchColumn();
 
-        $stmt = $db->prepare("SELECT d.*, o.id AS offer_id, o.expires_at AS offer_expires_at,
-                              u.full_name as client_name,
-                              u.phone as client_phone
+        $stmt = $db->prepare("SELECT d.id, d.service_type, d.item_category, d.item_quantity, d.item_weight,
+                              d.is_fragile, d.is_perishable, d.distance_km, d.total_cost,
+                              d.pickup_city, d.delivery_city, d.request_time,
+                              o.id AS offer_id, o.expires_at AS offer_expires_at
                               FROM deliveries d
                               JOIN delivery_driver_offers o ON o.delivery_id = d.id
-                              JOIN users u ON d.client_id = u.id
                               WHERE o.driver_id = :driver_profile_id AND o.offer_status = 'offered' AND (o.expires_at IS NULL OR o.expires_at > NOW())
                               AND d.delivery_person_id IS NULL 
                               AND d.status = 'broadcasted'
@@ -56,6 +57,8 @@ class DeliveryPersonController
         // Show the same commission used when an order is settled.
         foreach ($offers as &$offer) {
             $offer['driver_earning'] = self::driverEarning((float)$offer['total_cost']);
+            $offer['pickup_address'] = $offer['pickup_city'];
+            $offer['delivery_address'] = $offer['delivery_city'];
             unset($offer['delivery_otp']);
         }
 
@@ -103,6 +106,22 @@ class DeliveryPersonController
             if ($deliveryRow['pickup_city'] !== 'Kano' || $deliveryRow['delivery_city'] !== 'Kano') {
                 DatabaseTransaction::fail('This delivery is outside the Kano service area.', 400);
             }
+
+            // Lock availability inside the claim transaction so two requests
+            // cannot assign different deliveries to the same available driver.
+            $driverLock = $db->prepare("SELECT a.availability_status FROM driver_availability a
+                JOIN drivers d ON d.id = a.driver_id JOIN users u ON u.id = d.user_id
+                WHERE a.driver_id = ? AND d.active_status = 'active' AND d.kyc_status = 'verified'
+                  AND u.is_approved = 1 AND u.account_status = 'active' FOR UPDATE");
+            $driverLock->execute([$driverProfileId]);
+            if ($driverLock->fetchColumn() !== 'available') {
+                DatabaseTransaction::fail('You are no longer available for another assignment.', 409);
+            }
+            $work = $db->prepare("SELECT COUNT(*) FROM deliveries WHERE delivery_person_id = ?
+                AND (status IN ('assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived')
+                    OR (pickup_time IS NOT NULL AND status NOT IN ('delivered', 'completed')))");
+            $work->execute([$userId]);
+            if ((int)$work->fetchColumn() > 0) DatabaseTransaction::fail('Resolve your existing assignment or parcel custody before accepting another delivery.', 409);
 
             // 2. Validate driver's offer record
             $offer = $db->prepare("UPDATE delivery_driver_offers 
@@ -159,6 +178,7 @@ class DeliveryPersonController
                                    WHERE d.id = ?");
         $fetchStmt->execute([$deliveryId]);
         $delivery = $fetchStmt->fetch(PDO::FETCH_ASSOC);
+        unset($delivery['delivery_otp'], $delivery['otp_failed_attempts'], $delivery['otp_locked_until']);
 
         Response::json($delivery, 'Delivery offer accepted. You are assigned to this delivery.');
     }
@@ -176,7 +196,11 @@ class DeliveryPersonController
         $whereClause = "WHERE d.delivery_person_id = :user_id";
         $params = ['user_id' => $userId];
 
-        if ($status !== 'all' && !empty($status)) {
+        if ($status === 'active') {
+            $whereClause .= " AND d.status IN ('assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived')";
+        } elseif ($status === 'finished') {
+            $whereClause .= " AND d.status IN ('delivered', 'completed')";
+        } elseif ($status !== 'all' && !empty($status)) {
             $whereClause .= " AND d.status = :status";
             $params['status'] = $status;
         }
@@ -191,7 +215,7 @@ class DeliveryPersonController
                   FROM deliveries d
                   JOIN users u ON d.client_id = u.id
                   {$whereClause}
-                  ORDER BY d.request_time DESC
+                  ORDER BY d.id DESC
                   LIMIT :limit OFFSET :offset";
 
         $stmt = $db->prepare($query);
@@ -204,7 +228,9 @@ class DeliveryPersonController
 
         $deliveries = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        $paymentFlags = DeliveryPayments::pickupFlags($db, $deliveries);
         foreach ($deliveries as &$d) {
+            $d['pickup_payment_verified'] = $paymentFlags[$d['id']] ?? false;
             $d['driver_earning'] = self::driverEarning((float)$d['total_cost']);
             unset($d['delivery_otp']);
         }
@@ -218,68 +244,21 @@ class DeliveryPersonController
     public static function updateDeliveryStatus(PDO $db, int $userId): void
     {
         AuthMiddleware::requireDriverKyc($db, $userId);
-        $data = json_decode(file_get_contents("php://input"));
+        try { $data = DriverDeliveryProgress::request(file_get_contents('php://input', false, null, 0, 4097)); }
+        catch (TransactionBusinessException $error) { Response::error($error->getMessage(), $error->getStatusCode()); }
 
-        if (empty($data->delivery_id) || empty($data->status)) {
-            Response::error('Both delivery_id and status are required.');
-        }
-
-        // Verify assignment
-        $checkStmt = $db->prepare("SELECT * FROM deliveries WHERE id = ? AND delivery_person_id = ?");
-        $checkStmt->execute([$data->delivery_id, $userId]);
-        $delivery = $checkStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$delivery) {
-            Response::forbidden('Delivery record not found or not assigned to your account.');
-        }
-
-        if (!DeliveryStatusPolicy::driverTransition($delivery['status'], $data->status)) {
-            Response::error("Invalid delivery workflow transition from '{$delivery['status']}' to '{$data->status}'.", 409);
-        }
-
-        $updateFields = ["status = :status"];
-        $params = [
-            'status' => $data->status,
-            'id' => $data->delivery_id,
-            'user_id' => $userId
-        ];
-
-        if ($data->status === 'failed') {
-            $reason = trim((string)($data->status_reason ?? ''));
-            if ($reason === '') Response::error('A reason is required when marking a delivery failed.', 422);
-            $updateFields[] = 'status_reason = :status_reason';
-            $params['status_reason'] = $reason;
-        }
-
-        if ($data->status === 'picked_up' && empty($delivery['pickup_time'])) {
-            $updateFields[] = "pickup_time = NOW()";
-        }
-
-        $sql = "UPDATE deliveries SET " . implode(', ', $updateFields) . " WHERE id = :id AND delivery_person_id = :user_id";
-        $updateStmt = $db->prepare($sql);
-        $updateStmt->execute($params);
-        OperationalRecords::statusTransition(
-            $db,
-            (int)$data->delivery_id,
-            $delivery['status'],
-            $data->status,
-            $userId,
-            'delivery',
-            $params['status_reason'] ?? null
-        );
-        NotificationService::deliveryStatusChanged(
-            $db,
-            (int)$data->delivery_id,
-            $delivery['status'],
-            $data->status
-        );
-        if ($data->status === 'failed') self::releaseAvailabilityIfIdle($db, $userId);
+        $result = DatabaseTransaction::run($db, static fn(PDO $db) => DriverDeliveryProgress::apply(
+            $db, $data['delivery_id'], $userId, $data['status'], $data['status_reason']
+        ));
+        // A notification outage cannot turn an already committed milestone into an API failure.
+        try { NotificationService::deliveryStatusChanged($db, $result['delivery_id'], $result['previous_status'], $result['status']); }
+        catch (Throwable $error) { Logger::error('Post-commit driver milestone notification failed', ['delivery_id' => $result['delivery_id'], 'error' => $error->getMessage()]); }
 
         Response::json([
-            'delivery_id' => (int)$data->delivery_id,
-            'status' => $data->status,
-            'updated_at' => date('Y-m-d H:i:s')
-        ], "Delivery status successfully updated to '{$data->status}'.");
+            'delivery_id' => $result['delivery_id'],
+            'status' => $result['status'],
+            'updated_at' => gmdate('Y-m-d H:i:s')
+        ], "Delivery status successfully updated to '{$result['status']}'.");
     }
 
     /** Store a GPS sample from the assigned driver's device for an in-transit delivery. */
@@ -379,17 +358,6 @@ class DeliveryPersonController
         $earnings = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         Response::paginated($earnings, $totalCount, $page, $limit, 'Driver earnings retrieved.');
-    }
-
-    /** A driver who closes their last active assignment becomes available again. */
-    private static function releaseAvailabilityIfIdle(PDO $db, int $userId): void
-    {
-        if (!OperationsSchema::hasTable($db, 'drivers') || !OperationsSchema::hasTable($db, 'driver_availability')) return;
-        $active = $db->prepare("SELECT COUNT(*) FROM deliveries WHERE delivery_person_id = ? AND status IN ('assigned', 'driver_en_route', 'picked_up', 'in_transit', 'arrived')");
-        $active->execute([$userId]);
-        if ((int)$active->fetchColumn() !== 0) return;
-        $driverId = OperationsSchema::driverIdForUser($db, $userId);
-        if ($driverId) $db->prepare("UPDATE driver_availability SET availability_status = 'available', available_since = NOW() WHERE driver_id = ? AND availability_status = 'busy'")->execute([$driverId]);
     }
 
     /**

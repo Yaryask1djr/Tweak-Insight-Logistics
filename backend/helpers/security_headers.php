@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/client_ip.php';
+
 /**
  * Common response security headers — emitted by PHP for the dev server and for
  * every API JSON response.  The directives below MUST stay byte-synchronized
@@ -45,7 +47,7 @@ class SecurityHeaders
         $isHttps =
             (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443)
-            || $forwardedProto === 'https';
+            || ($forwardedProto === 'https' && ClientIp::isTrustedProxy((string)($_SERVER['REMOTE_ADDR'] ?? '')));
 
         if (!$isHttps) {
             $host = $_SERVER['HTTP_HOST'] ?? '';
@@ -80,7 +82,8 @@ class SecurityHeaders
         // non-production only when running behind a HTTPS proxy so devs can
         // test mixed-content warnings locally if desired.
         $isProd = strtolower((string)getenv('APP_ENV')) === 'production';
-        $behindTlsProxy = strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+        $behindTlsProxy = strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'
+            && ClientIp::isTrustedProxy((string)($_SERVER['REMOTE_ADDR'] ?? ''));
         if ($isProd || $behindTlsProxy) {
             $policy[] = 'upgrade-insecure-requests';
         }

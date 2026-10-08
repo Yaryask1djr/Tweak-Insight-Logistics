@@ -1,0 +1,2508 @@
+{
+  "head": "27d62af093daf957596ecf581b958be37660c123",
+  "scope": "Local working tree, not a remote HEAD verification. All included bytes hashed; static patterns are review candidates.",
+  "file_count": 349,
+  "categories": {
+    "source-or-configuration": 218,
+    "documentation": 19,
+    "generated-frontend": 46,
+    "asset": 16,
+    "test": 50
+  },
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 2332,
+      "lines": 83,
+      "sha256": "66de96a01fb172382a50559d80b02a15737a61bfe68c8b512756b15a0bec6ae4",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": ".hintrc",
+      "bytes": 172,
+      "lines": 12,
+      "sha256": "c8403f5afbf0c8e5f460beb963f31667621b3cb220836dd3e56a0177b3ba0c60",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7141,
+      "lines": 129,
+      "sha256": "a62a236e17c0584f6e68d622c83d11bb6caf419c6890c95b9bf6b7e9f238377b",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/.env.example",
+      "bytes": 5854,
+      "lines": 142,
+      "sha256": "9cc52b388e12d48599fcfcdbb7de10cb0fcf7d8a506daeb98ecf9fee6e0d91a5",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/.htaccess",
+      "bytes": 3981,
+      "lines": 75,
+      "sha256": "7ef6458dcc52cf76839ef7eb4f149079a7c68093c611c296950228f4540920c6",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/api/index.php",
+      "bytes": 23961,
+      "lines": 448,
+      "sha256": "6bf08f6deb50f3bf37af799a315d2e2ce82de707c49872209356a297ce4183de",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/bootstrap.php",
+      "bytes": 3528,
+      "lines": 100,
+      "sha256": "bf21867c2eafbccba6134887555dcca769208a5b842f3825d42a8c157fab6f58",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/composer.json",
+      "bytes": 61,
+      "lines": 5,
+      "sha256": "867ee24400b7d5754318ae1d9bcd9b30d5fba95b5f01d6ec564588b93de07fa9",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/composer.lock",
+      "bytes": 2981,
+      "lines": 82,
+      "sha256": "466f09d3863645a05fa1ffdc8d22a468a21d2ac336d9a3ef5ed14561ff8e5761",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/config/config.php",
+      "bytes": 1755,
+      "lines": 35,
+      "sha256": "5e0525fa798d6b918d371c59ead36d371ffae332b688c2efefd1a2f6c7edf7b7",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/config/database.php",
+      "bytes": 2079,
+      "lines": 69,
+      "sha256": "6955210b100c0fe1c14c8760a56706574940e76d361d1db53dea9a98aca4ac5c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/AdminController.php",
+      "bytes": 45694,
+      "lines": 789,
+      "sha256": "8f131aae344a228bfc21bb5bd60212f725833061051cb92113b9ffd161637f7d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/AuthController.php",
+      "bytes": 8673,
+      "lines": 204,
+      "sha256": "9fa30f95982290fbd5aea2ca915808295477d13ca8cc78a8bb43576b0d71c0a2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/ClientKycController.php",
+      "bytes": 8569,
+      "lines": 158,
+      "sha256": "d4de4e5c4ff4e3d0e17d3e3057049cffe003004f3cf0c8d3ce06dbee5c390cf1",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/DeliveryController.php",
+      "bytes": 33689,
+      "lines": 614,
+      "sha256": "09d4f714613ab565398db2a381864ea17d71a7b44660aed55c480aeb70b45f24",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/DeliveryPersonController.php",
+      "bytes": 21890,
+      "lines": 399,
+      "sha256": "f1f809f2771450fcab75133b68b393ca40e578061cb3173cc0393215a5b2f2de",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/DriverOperationsController.php",
+      "bytes": 13693,
+      "lines": 193,
+      "sha256": "f125475417a40d3d690489ee93c351e14974e6a1345527dd78a04336788ddd53",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/ExportController.php",
+      "bytes": 1882,
+      "lines": 33,
+      "sha256": "21442ddc85b6f2fe927e88caee409e4280d22be94cacb7cb68467f72a97e9dd0",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/HealthController.php",
+      "bytes": 5428,
+      "lines": 82,
+      "sha256": "bb7b351289124eac89ee3920185a32b60746eec660ccff5b7caf7b4d6c5968cd",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/LiveTrackingController.php",
+      "bytes": 17502,
+      "lines": 362,
+      "sha256": "bbdd9c39240d80d90f7f4166d0ab38563101422bbadaa6a7d6b8adedf6296996",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/NotificationController.php",
+      "bytes": 2997,
+      "lines": 68,
+      "sha256": "01913a99aa124a21f4fa47ce058ba3829747ec5f975004f3bb5d79c9c57ff7ec",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/OperationsManagementController.php",
+      "bytes": 15032,
+      "lines": 156,
+      "sha256": "d041f53b86d3d9c2614c8768a16b40d4fa7fb03a8d8869287922dd409233837a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/PaymentController.php",
+      "bytes": 3780,
+      "lines": 54,
+      "sha256": "c815f736ec86d3795770798f07e67d75992db2c3116c250b0a9c2012c801f2ce",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/controllers/ReportingController.php",
+      "bytes": 4066,
+      "lines": 53,
+      "sha256": "04669cc1eebc812de4a66d2ea972c0956415f8c7bceeefd4c9e1829c89a43a38",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/database/ARCHITECTURE.md",
+      "bytes": 3333,
+      "lines": 67,
+      "sha256": "0a7d5f12ae9628ddf68f338e77c33d51cdadd0885c282030f0a400e5a43d060a",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/database/create_app_user.sql",
+      "bytes": 1977,
+      "lines": 56,
+      "sha256": "28ac74b78423b799a883e3d88fb0489f209c6ac02aafa89d01c7325f976d2072",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/database/schema.sql",
+      "bytes": 40174,
+      "lines": 707,
+      "sha256": "30296e4f59281c1c88fcece78e83413e12014c7c2e7252e1d778805a031ae054",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/database/setup_slow_query_log.sql",
+      "bytes": 3161,
+      "lines": 55,
+      "sha256": "67a5b4396ac0a8c6f9f6dd5b26d49b194967db058681666052fc492dc84a6a71",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/deploy/crontab/til-production.crontab",
+      "bytes": 1538,
+      "lines": 23,
+      "sha256": "c9840d392b7c365df207147bb8c645f88c1871a0ce13e897fec2e2720401be84",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/deploy/nginx/til.conf",
+      "bytes": 5279,
+      "lines": 138,
+      "sha256": "377a1f64ff35c7c4231f318776aee7bca4b7d336ef26067ba1dc7f7d87500678",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/deploy/setup_daemon.sh",
+      "bytes": 6144,
+      "lines": 120,
+      "sha256": "44a5325a08d7d552fe24b8ae0b36f4d397a5bd8dc5e347e86a0ca034383d0dfc",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/deploy/supervisor/til-queue-worker.conf",
+      "bytes": 560,
+      "lines": 18,
+      "sha256": "a8db1bc04b4c24c88854c96eed24aea2772f2ab1591652ba481a82790a2b8d4f",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/deploy/systemd/til-maintenance.service",
+      "bytes": 707,
+      "lines": 26,
+      "sha256": "090072055e013095241b8223524873bd9cf9db607daff5c838275eb84ca9b148",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/deploy/systemd/til-maintenance.timer",
+      "bytes": 351,
+      "lines": 13,
+      "sha256": "274d931d733eae67c015bf7ee1ffbc5940b39aac2e434235d39d7430a3662107",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/deploy/systemd/til-queue-worker.service",
+      "bytes": 876,
+      "lines": 36,
+      "sha256": "31df17016899f7a324ee802fc8b64eadebd1e0bf145d89cea737e80951a17186",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/docs/AUDIT_FIX_PROGRESS.md",
+      "bytes": 7508,
+      "lines": 48,
+      "sha256": "d6757f1b0b9870e3c842b5985ef0add96637b76e7f49334adefc8984ba6b202d",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/AUTHORIZATION.md",
+      "bytes": 2168,
+      "lines": 44,
+      "sha256": "1770460cd31625acfd067a82f2e116a908b4b7a793d4f89faa6fc46df3d562c8",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/AUTH_SESSIONS.md",
+      "bytes": 2386,
+      "lines": 59,
+      "sha256": "3078102b7d8d85b746f9882ff377332a36afd06d9e4189f1e68983acb7a2b4f8",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/CANCELLATION_CONSISTENCY.md",
+      "bytes": 3615,
+      "lines": 39,
+      "sha256": "99b2322c0888cc302eb212b6b5ef7e6537a6d52784803a86c66f5617bd4d0a13",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/CDN_DEPLOYMENT.md",
+      "bytes": 1230,
+      "lines": 26,
+      "sha256": "7e5e1072b9d164e0e42249fc46779e353ec52cfb0a146c04b413b8399357ee82",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/CREDENTIAL_ROTATION.md",
+      "bytes": 2867,
+      "lines": 73,
+      "sha256": "ffef56384e4c06f998b5b03afe22a122c7220a9822fcbd22604a29e183fcd5bb",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/DOCUMENT_STORAGE.md",
+      "bytes": 6148,
+      "lines": 139,
+      "sha256": "1d59132b4760f9ea32da87fe51aa0efa35315c6b5e481a75cf2b131f56c3ca97",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/DRIVER_PICKUP_GUARD.md",
+      "bytes": 6755,
+      "lines": 72,
+      "sha256": "1b2edba3b66dee75a1d9c0ea50084c52352221b0cedb4e444acc839ebf1fde00",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/ENTERPRISE_AUDIT_2026-09-29.md",
+      "bytes": 44390,
+      "lines": 279,
+      "sha256": "699b01a33a0479c119d3aa805a458b5b44fb5f348e66fee1cc4eabb2176f4ea4",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/FARE_AND_PAYMENT_VERIFICATION.md",
+      "bytes": 13611,
+      "lines": 112,
+      "sha256": "4bc4a834d7da20165714423be55e9a0f80c99fde0469e476e81c9dfdd5b6c79a",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/NOTIFICATIONS.md",
+      "bytes": 3790,
+      "lines": 76,
+      "sha256": "12d80df7373654f9fd714e6b2b06a828a722bfcb1264e71880bc2657fe8eb3aa",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/OPERATIONS_WORKFLOW.md",
+      "bytes": 2455,
+      "lines": 46,
+      "sha256": "8007ab26103b2874fc19f89168e16e5957264d80701aa5114f3d2a42c8c9b0f1",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/QUEUE_RELIABILITY.md",
+      "bytes": 8116,
+      "lines": 80,
+      "sha256": "8ec9912f047d4c63ab924440c2ebd53cd2985bd17d4b9bd7136da9b08f218d73",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/R04_R12_IMPLEMENTATION.md",
+      "bytes": 20270,
+      "lines": 157,
+      "sha256": "cc796cdbbde4931f5255ae517b0ada6e698bffb3b2d291ab1944df27796962c2",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/RATE_LIMITING.md",
+      "bytes": 3486,
+      "lines": 87,
+      "sha256": "a01d06b489ed3f2c01f0c3eb0ab0b81210595a24fd5f2662471691e5455f4694",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/docs/WEB_SERVER_SECURITY.md",
+      "bytes": 4484,
+      "lines": 123,
+      "sha256": "aeb06607617bbf3605c68612728c5927d73dbd14c08747a003a3d5b3317b5bfd",
+      "category": "documentation"
+    },
+    {
+      "path": "backend/helpers/account_registration.php",
+      "bytes": 3276,
+      "lines": 55,
+      "sha256": "82b39eca47c37bd77eaaa30b8090877d292f90697db7ab9ee7c5f78c19c67b2d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/auth_middleware.php",
+      "bytes": 9380,
+      "lines": 237,
+      "sha256": "bc69fa469370504d55be1769de46e4f513f00d7f20222ee8a36e2d6d456fb342",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/authorization_policy.php",
+      "bytes": 2172,
+      "lines": 68,
+      "sha256": "8f3edba99abd4ad01078683cf329cf76abeda30cf845d608a8a15663067000eb",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/booking_input.php",
+      "bytes": 6478,
+      "lines": 96,
+      "sha256": "a5f2aae8a04ca91da176ef5ffd6f1c20993da4ad6ee7712df67457dc6b32b0e0",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/booking_outbox.php",
+      "bytes": 3635,
+      "lines": 55,
+      "sha256": "60e9c79017f543d9a27291746eaa5c00f125a995b952ea946798bf8829550125",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/booking_quote_inputs.php",
+      "bytes": 4490,
+      "lines": 99,
+      "sha256": "00ccd0c9c872be1086aad7a753088876a94bd7f964222b2e4910a0eef0d256e2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/cache_helper.php",
+      "bytes": 5943,
+      "lines": 189,
+      "sha256": "709730a85ae935ced972f6f42ae8dedafecda7a0c836c14ad427a2b6d2750454",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/client_ip.php",
+      "bytes": 5276,
+      "lines": 147,
+      "sha256": "dec093a35dfbcd7e012bf33d52f050e1598c0cddfa008a7a154ba053aa96301a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/csv_export.php",
+      "bytes": 717,
+      "lines": 22,
+      "sha256": "fd15ae27d89cda20df1454750e38f3e1a0553812ce9e080839d7822aee8c86f6",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/cursor_pagination.php",
+      "bytes": 968,
+      "lines": 24,
+      "sha256": "7cb0ded2d58d81e3a235d73b21a0ff925a3cdf7a29525edaaf1a98ff66abb830",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/database_transaction.php",
+      "bytes": 6041,
+      "lines": 164,
+      "sha256": "669852d85a9124471de5451e876d9f515ff7b5003779bc31bf89d576d65606e2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/delivery_booking.php",
+      "bytes": 8426,
+      "lines": 135,
+      "sha256": "7c2458a82e7e300ae081d0d7d26300f5dc0dc9480c103e3f7aa51d96fb53d0da",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/delivery_payments.php",
+      "bytes": 26255,
+      "lines": 283,
+      "sha256": "a95bf969869fa6f444e830e94aee2c75f008be5a513d37cf3a097fc93189fb63",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/delivery_resolution.php",
+      "bytes": 5931,
+      "lines": 84,
+      "sha256": "e217aa3e8ee4ef48e1b9c7cbc8950977a0a90d7267a3c7e4193150bed3e1874b",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/delivery_status_policy.php",
+      "bytes": 1242,
+      "lines": 37,
+      "sha256": "19892a54cc9dd043cd15eba13be9448cdd6b886582620539cb2f65e1417ba8ff",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/driver_delivery_progress.php",
+      "bytes": 7801,
+      "lines": 121,
+      "sha256": "fe71287b99898a8e61b5d9539ced86302d6fb2759caf37a9fa7fe6c32c1c1b6d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/frontend_release.php",
+      "bytes": 573,
+      "lines": 15,
+      "sha256": "24d5a35e340d18329d7729f7eebe5737baa8855e453400577145064ed110adce",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/http_input.php",
+      "bytes": 1965,
+      "lines": 39,
+      "sha256": "66366e273bcd1ab9518253e8c6da9c0ec64816ec33205dfeaa29423fb9a02688",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/job_queue.php",
+      "bytes": 17998,
+      "lines": 348,
+      "sha256": "4d1846f16c91d681673a3a291ce3f051bee66551d09a289e1eb26d3e2e628e9a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/jwt.php",
+      "bytes": 1472,
+      "lines": 45,
+      "sha256": "a0e24c48aebb78c1b4174fccb645ce11f5df7ed2cc0b05b29154e5017d7504d2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/kano_service_area.php",
+      "bytes": 3787,
+      "lines": 94,
+      "sha256": "b2558c4731cf4c2837a30c0a14654f33e76aede938ac82c06314846919faa658",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/kyc_workflow.php",
+      "bytes": 13450,
+      "lines": 143,
+      "sha256": "731d80348f319e252c922220c2725ca3ffdf224361d1e961c2c0da9e0150a1ee",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/listing_query.php",
+      "bytes": 1595,
+      "lines": 31,
+      "sha256": "9ce40e4602eb83e6317fc1a2d12897c74f4cf61ae047255031ab671fd8697ca1",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/log_sanitizer.php",
+      "bytes": 1560,
+      "lines": 39,
+      "sha256": "e28a07b301e39fd6617b64d7db362e565f69aadca22376c47032aea309f41fc6",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/logger.php",
+      "bytes": 8003,
+      "lines": 244,
+      "sha256": "c729124467b65d87a95080fca2236bde15afcfabb4b76b3db563a4c5ad72aff1",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/maintenance_runner.php",
+      "bytes": 1493,
+      "lines": 41,
+      "sha256": "56d695ff00d60386e0a22cf8ad12abdf6c09c7205897a6891cdb561a90dd637e",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/monitoring.php",
+      "bytes": 1524,
+      "lines": 48,
+      "sha256": "3d83ae26648acd289279b75a5cb6d8079c4f56d14719d8404f749bcf35ac61dd",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/notification_inbox.php",
+      "bytes": 2032,
+      "lines": 30,
+      "sha256": "3fe7f4f22b59178820592dac68e8d9c939c8c521927cb2b080111df1214041a4",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/notification_service.php",
+      "bytes": 17515,
+      "lines": 366,
+      "sha256": "9bbb470b657557f49e6835306bfae79f52ade93306c0b4453aec3423de217256",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/operational_records.php",
+      "bytes": 9101,
+      "lines": 234,
+      "sha256": "1980e33497ca28fa78c70aac7f317e8f034882aa7377641d2c2229b06d0b3a7d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/operations_schema.php",
+      "bytes": 3324,
+      "lines": 82,
+      "sha256": "17bc9a579c509e302fec5c8d2f3df9cf780a8ca24c468b175ae59860a9098d83",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/password_policy.php",
+      "bytes": 472,
+      "lines": 14,
+      "sha256": "5c5f67a07da4127d6f01afb0537897e876e0c5b25d42285526e654d8359d2c16",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/payment_money.php",
+      "bytes": 873,
+      "lines": 20,
+      "sha256": "8bac0edf3220eabaaed05ebea5bf3c6f2e853ec76ec3c8dd12b1047235cd37f6",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/payment_webhooks.php",
+      "bytes": 6584,
+      "lines": 81,
+      "sha256": "ee1c12ab7ac48c07e9b6352d63ee4e399a1424dbbc868bb873818efb678f311b",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/paystack_gateway.php",
+      "bytes": 6901,
+      "lines": 109,
+      "sha256": "ca9028987b3ae9174548b62cf70726e66f8a42d6621ed74bcfb657268667b85f",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/rate_limiter.php",
+      "bytes": 8292,
+      "lines": 198,
+      "sha256": "4e3756ca576967888a7fc5120036f696ca24e64f7fdb31ba67afa0766a815a7b",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/refresh_session.php",
+      "bytes": 13437,
+      "lines": 309,
+      "sha256": "28fc95b94341a2f2cede7e1f36bb407eb650620ac236054b87c9f88ba402fbd9",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/report_export.php",
+      "bytes": 9049,
+      "lines": 136,
+      "sha256": "9d8b775448b98c45b543dc44e638b90619fed857ced0a4bcb1c9d8baa03f7e65",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/response.php",
+      "bytes": 4279,
+      "lines": 152,
+      "sha256": "091aa5b912950a1ef0439ee830878a38fba1ba6de8d1c029ef3f4ad6cf9df585",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/secure_document_download.php",
+      "bytes": 4898,
+      "lines": 125,
+      "sha256": "2fe2d039fbeb237be0ec9c1f2137ff2f7777ad7e91934dbf4e2089c6282ade4c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/security_config.php",
+      "bytes": 2632,
+      "lines": 93,
+      "sha256": "3f363f2f1321dc576ab4e49469c8109916e2aa8a8530dddd51ea32800c14d42c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/security_headers.php",
+      "bytes": 3621,
+      "lines": 93,
+      "sha256": "a02471d740bce8520c185b9cc8e2c1921685cc9c091d68a097dc2f07735c217c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/spatial_helper.php",
+      "bytes": 3474,
+      "lines": 92,
+      "sha256": "f74dd96f49630b83c02d51368d37f36633169bfa8f3ae78009c85119e8d44480",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/storage_adapter.php",
+      "bytes": 19035,
+      "lines": 511,
+      "sha256": "1a97a5e0c3489c64fbc8b53c7b253990fd87c23428d62118d7039ff17bdffaf7",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/tracker_helper.php",
+      "bytes": 6570,
+      "lines": 169,
+      "sha256": "52e7592ef756d972c24845b1522496a68ba24d014b6e6cbd62ed6e74da8ce00c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/transactional_schema.php",
+      "bytes": 828,
+      "lines": 17,
+      "sha256": "d98a0e47610cc67a776114a05aaa70700b4ebcb06e9109e1eb9a4191399faae7",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/upload_security.php",
+      "bytes": 20975,
+      "lines": 495,
+      "sha256": "12938517d3bf56b49764bf3247372db8fc0f3e615d114215a56bbcacce01b232",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/helpers/webhook_dispatch.php",
+      "bytes": 4237,
+      "lines": 67,
+      "sha256": "d62375af74946395ef2ec326de7b5ac20de5438a55e4e9efa25210cb60463d53",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/index.php",
+      "bytes": 4892,
+      "lines": 138,
+      "sha256": "7769568987618c6ea5a7279cacdaea8f5fb8c5ce1d883bd5c9ab8f26a0a69d8f",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/public/.htaccess",
+      "bytes": 3937,
+      "lines": 86,
+      "sha256": "0fa10be7e0dc03992cd2b7020d0816e79fc751b9fe0022600ea1dbddb1b61bf9",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/public/api.php",
+      "bytes": 347,
+      "lines": 12,
+      "sha256": "31f07cd0417d05999e8cf6ff3ddd656dcadc32b9c4b672433b4e998f1164fd96",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/public/asset-manifest.json",
+      "bytes": 3192,
+      "lines": 51,
+      "sha256": "5c006e17dcf37651fa08ff92d0c9d72c7104760972adaf95f8478825fc91a9c9",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/favicon-16x16.png",
+      "bytes": 873,
+      "lines": null,
+      "sha256": "cda29a7811f8a7bb79f18186eaf3b2aa29ceb8e7f840a22edd35415b307a2349",
+      "category": "asset"
+    },
+    {
+      "path": "backend/public/favicon-32x32.png",
+      "bytes": 2451,
+      "lines": null,
+      "sha256": "239a5a979da431a5c56e2490801a003913de3cf5498847459942acd85c7ce337",
+      "category": "asset"
+    },
+    {
+      "path": "backend/public/favicon.ico",
+      "bytes": 766,
+      "lines": null,
+      "sha256": "e2b827e4b88c6c16eaad3b695faff1d18f82ec8a5eefea9d42e7a501a8dc8851",
+      "category": "asset"
+    },
+    {
+      "path": "backend/public/index.html",
+      "bytes": 1806,
+      "lines": 1,
+      "sha256": "4972973701cf7ddace40cbd14f6d4a4a5b4aba0131016181bb9a2d77e3b05024",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/index.php",
+      "bytes": 690,
+      "lines": 22,
+      "sha256": "e97b509205f8fb185e4ce85b690c8fbd3bedc1f0b3556b6c9758d54db99ab82e",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/public/logo.png",
+      "bytes": 278173,
+      "lines": null,
+      "sha256": "0f6bf7b5c9ac472d69e321aa70fedfbca1877431573685ea9c6758e2c7b517ac",
+      "category": "asset"
+    },
+    {
+      "path": "backend/public/logo.webp",
+      "bytes": 68384,
+      "lines": null,
+      "sha256": "19c426e425c35768a79331c6c9e3d02f2e777878218c09065b2a58fac72883d5",
+      "category": "asset"
+    },
+    {
+      "path": "backend/public/logo192.png",
+      "bytes": 48614,
+      "lines": null,
+      "sha256": "4561389729b0dfbd15e205c7840aa996a14cfecaebb4929bc460d5e4a420fcac",
+      "category": "asset"
+    },
+    {
+      "path": "backend/public/logo512.png",
+      "bytes": 265861,
+      "lines": null,
+      "sha256": "b7759f27e8a7f703284003f003775b8d4f230fa428753b328e73f40c253a31a4",
+      "category": "asset"
+    },
+    {
+      "path": "backend/public/manifest.json",
+      "bytes": 581,
+      "lines": 30,
+      "sha256": "b9367d45cc4acfcbdd4f545ddbf8b0df8fbb82ac6930047adb77f18c223ccf39",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/public/robots.txt",
+      "bytes": 67,
+      "lines": 3,
+      "sha256": "90d24bc3bf698ac1e173739502298ccca72adf1f564fab05f484b8c48d1cadd2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/public/static/css/106.447650dd.chunk.css",
+      "bytes": 16064,
+      "lines": 2,
+      "sha256": "32fb43394e84304dc53680fd39088e4d348704e2784134610ec148a6505635fc",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/css/106.447650dd.chunk.css.map",
+      "bytes": 22624,
+      "lines": 1,
+      "sha256": "722ffd238df25b97d948ea10d876c245ec6855ba4d2dfebb4065054dea49e479",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/css/15.59afee0d.chunk.css",
+      "bytes": 14958,
+      "lines": 2,
+      "sha256": "83c2cbcfca0abc06ad504572e4503a852bbae78e2c9d9dde5bac401268b58b2f",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/css/15.59afee0d.chunk.css.map",
+      "bytes": 20574,
+      "lines": 1,
+      "sha256": "2c5d3468d692835f552e8288944196678c3d202556409d8110d74222ccbd3e62",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/css/570.447650dd.chunk.css",
+      "bytes": 16064,
+      "lines": 2,
+      "sha256": "8d19f979527cf00758f333b93b627e69fc5d1b3af18483b7160079bf2de9234b",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/css/570.447650dd.chunk.css.map",
+      "bytes": 22624,
+      "lines": 1,
+      "sha256": "dd2e387cffb2e4b06ed73e7488e4fbbb62a6df2d4a58ae841453992bc7ebee01",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/css/main.2189187a.css",
+      "bytes": 321762,
+      "lines": 6,
+      "sha256": "38b944cd225e6fcb3aa9a229f181b0e1b81062ee55c396837768e75b6262ef19",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/css/main.2189187a.css.map",
+      "bytes": 685902,
+      "lines": 1,
+      "sha256": "dd9b3869387ce11eea289ca282755fc23f0b018e6a783c73c781b7156cbc78a7",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/1.e6cc86bb.chunk.js",
+      "bytes": 4972,
+      "lines": 2,
+      "sha256": "452730e28498def4b923a72649f824df99f21ee4b2b775367edecebecad478bf",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/1.e6cc86bb.chunk.js.map",
+      "bytes": 10075,
+      "lines": 1,
+      "sha256": "3e0e1bf7e20cc8d1297c6e193d15863bf48108e6e22433a9554146166fd1db25",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/105.cfdf47f3.chunk.js",
+      "bytes": 84605,
+      "lines": 2,
+      "sha256": "31d626ad76d3ca2370fb615755d44f399c4ff952bf6a33a4302614bda5b5136b",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/105.cfdf47f3.chunk.js.map",
+      "bytes": 244497,
+      "lines": 1,
+      "sha256": "6709fa98fbbaba1b52b8e096aa03554bce6730efe933e83b6fa1f6a6b14ce24d",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/106.110b721d.chunk.js",
+      "bytes": 128956,
+      "lines": 2,
+      "sha256": "0724f7718dea91eb82694580abceef79e575eac6db87785566ce8a802bbb98ef",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/106.110b721d.chunk.js.map",
+      "bytes": 381156,
+      "lines": 1,
+      "sha256": "58c68b1de3bf4ed63dc3617dce7a59f7bb34c30387838a7bff8f6518b687ad4a",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/15.d2d1d256.chunk.js",
+      "bytes": 16144,
+      "lines": 2,
+      "sha256": "37eb1f75c50afbb197cfcdf43d8f6a05179169ecd83e5d70ae075fc0e7e0c98a",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/15.d2d1d256.chunk.js.map",
+      "bytes": 43804,
+      "lines": 1,
+      "sha256": "b59997e71b44711fa67a6c709411be65bd38a251f5ffaebac7d431ef9d48f8cd",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/215.de73debf.chunk.js",
+      "bytes": 2930,
+      "lines": 2,
+      "sha256": "24b3733c3b787c74a85b95817c54f5801becac9fc9debcfc4c93e2e2fa4406c4",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/215.de73debf.chunk.js.map",
+      "bytes": 5303,
+      "lines": 1,
+      "sha256": "98b1d70ca01043e84a86fd0f10aa22a8b1b82942fac185911629509a7055058c",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/261.ec78d98b.chunk.js",
+      "bytes": 10950,
+      "lines": 2,
+      "sha256": "e6c85d25447a7affc4c0426f0bf60ed854132913de8a69a8e458275f46110e65",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/261.ec78d98b.chunk.js.map",
+      "bytes": 53436,
+      "lines": 1,
+      "sha256": "dac95ec04a7047e87bc95e14a33ba9401f3ba15fe3873b2c899c51687908526b",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/570.9e3bde3e.chunk.js",
+      "bytes": 145313,
+      "lines": 2,
+      "sha256": "30ad42c2e9dcb57b4087529ea0f7b271ffe8863a5993c7ee2c13089d8865ac8b",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/570.9e3bde3e.chunk.js.map",
+      "bytes": 393125,
+      "lines": 1,
+      "sha256": "a34af1421655c3c2c1fad751fb41b2008497a60e8a4555d27581a889ff706815",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/584.dfb3ec96.chunk.js",
+      "bytes": 5237,
+      "lines": 2,
+      "sha256": "9aa8bad149c1be901004b944fe4de370111fa70cbfabcee728ae0acea095d66e",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/584.dfb3ec96.chunk.js.map",
+      "bytes": 14127,
+      "lines": 1,
+      "sha256": "619e49e4c80a3ad44422ab32af914fe60016fe44994ba9c2d526e075a03518c5",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/619.666b5218.chunk.js",
+      "bytes": 5458,
+      "lines": 2,
+      "sha256": "149eb83b6de67f369be980e8a1863601647da2edad47433f8cc8d37522302cb3",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/619.666b5218.chunk.js.map",
+      "bytes": 10755,
+      "lines": 1,
+      "sha256": "406269c187f991c55e1df72aa96d86325ab3841217ec73efe40be53d8b5caf93",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/643.1f496d9c.chunk.js",
+      "bytes": 155977,
+      "lines": 3,
+      "sha256": "bd3cda2c981f000ed938bf6103fea89b7080b847973197a004955d2e19098e09",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/643.1f496d9c.chunk.js.LICENSE.txt",
+      "bytes": 153,
+      "lines": 4,
+      "sha256": "ea790f3be4982c33c90750c0596263856a361f65ff6369653718f93c29a6520c",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/643.1f496d9c.chunk.js.map",
+      "bytes": 720863,
+      "lines": 1,
+      "sha256": "ca2f0aa82545c4db3cacd6ceedb79b59663e9d235ba920ce04076817a8b3ef6a",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/665.ea0c1bfb.chunk.js",
+      "bytes": 1322,
+      "lines": 2,
+      "sha256": "69c1e6786a61b14a215028447e8bd67baee5c7b6a448e8475d7095bb7ae6a291",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/665.ea0c1bfb.chunk.js.map",
+      "bytes": 3264,
+      "lines": 1,
+      "sha256": "46d0e6df65d1aa79910488d88f5d8e36283f89cddc483f1c8958a631b7cf7356",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/668.aa41ed91.chunk.js",
+      "bytes": 6910,
+      "lines": 2,
+      "sha256": "ce16f6cd9e835fc188f17271f38d1758d6eb7fc4913db59a36bc5a487c79dc3a",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/668.aa41ed91.chunk.js.map",
+      "bytes": 17075,
+      "lines": 1,
+      "sha256": "eeb3241a973f06d891206f7ef69ac04cc0eed23b7a240f3379e2390e72177cf1",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/710.854e032f.chunk.js",
+      "bytes": 3941,
+      "lines": 2,
+      "sha256": "10ee6cda7122d0c950438f16742ca884fa85ebcc55d46fb9945b9fbbdfd17d64",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/710.854e032f.chunk.js.map",
+      "bytes": 8797,
+      "lines": 1,
+      "sha256": "0e38b0de514646d23df3012946a434e15346ed14e762f5a3238b3ef5fee0455b",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/767.edb1c583.chunk.js",
+      "bytes": 6592,
+      "lines": 2,
+      "sha256": "d73a803b19d7263c3a8fa2f4f0f2011529f993a200008dc41c075c5583494f8c",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/767.edb1c583.chunk.js.map",
+      "bytes": 16628,
+      "lines": 1,
+      "sha256": "ddecf2b4a8cb51631a4b01f3b7216313645a56b3a315f02b6475fc8c84f50b99",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/839.a1f12c13.chunk.js",
+      "bytes": 12896,
+      "lines": 2,
+      "sha256": "b7ad0e6a6179ec1dddc8e5103c0f84b703df7abb65e5c76d5d8e779157389862",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/839.a1f12c13.chunk.js.map",
+      "bytes": 37746,
+      "lines": 1,
+      "sha256": "1eb7b3c0104b197697dc9e793bc1babf80415fbbf413c09fe113e005e6c08a3b",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/main.a5d534ab.js",
+      "bytes": 298763,
+      "lines": 3,
+      "sha256": "1268072a532154f40b718ff212a478c2f5c8a30f99af349f6b1673393e05c5be",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/main.a5d534ab.js.LICENSE.txt",
+      "bytes": 1652,
+      "lines": 72,
+      "sha256": "fc4f8b8f682fc1422111dfa8009a4c5df1649bd58efb94321ee1a304540c954c",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/js/main.a5d534ab.js.map",
+      "bytes": 1363726,
+      "lines": 1,
+      "sha256": "506e3ea6f36d5df5a441ecec249eefcfaed620965ae1ca147385a01c1e14ebab",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/media/logo.0069c767d443bf257913.webp",
+      "bytes": 68384,
+      "lines": null,
+      "sha256": "19c426e425c35768a79331c6c9e3d02f2e777878218c09065b2a58fac72883d5",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/public/static/media/logo.292d755a84c624742e1a.png",
+      "bytes": 278173,
+      "lines": null,
+      "sha256": "0f6bf7b5c9ac472d69e321aa70fedfbca1877431573685ea9c6758e2c7b517ac",
+      "category": "generated-frontend"
+    },
+    {
+      "path": "backend/queue/redis/common.lua",
+      "bytes": 2509,
+      "lines": 55,
+      "sha256": "9083b803c9d5b03ea0c7a6874637fd7fe7795d529ff4ede137bc07d706d21217",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/queue/redis/complete.lua",
+      "bytes": 83,
+      "lines": 2,
+      "sha256": "513a7d059fdfe103c11b30b583ba09c6071c2710d7fb1484919411e189d155de",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/queue/redis/fail.lua",
+      "bytes": 445,
+      "lines": 14,
+      "sha256": "f1506b466e3b30680d551da186922c6e2af8d45919badd3a3c3494cd7e85ec79",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/queue/redis/push.lua",
+      "bytes": 164,
+      "lines": 7,
+      "sha256": "a8f730af41e336599f4ac65e8408ef99f9a572ba7f1ce5dea5cacc624af33b89",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/queue/redis/renew.lua",
+      "bytes": 110,
+      "lines": 3,
+      "sha256": "e9591a48c8172393e449fd5aba6415c9067c63465c0e3bea8dde110f2d2f64a4",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/queue/redis/reserve.lua",
+      "bytes": 1728,
+      "lines": 47,
+      "sha256": "e3eeb036a6f4f393d2c356144936ff53cc2cc627b7ba13ae653b31d4beb269b8",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/router.php",
+      "bytes": 5730,
+      "lines": 151,
+      "sha256": "60eae47f4a835ceebe2b6d347d9991167c22fe105afcef3560e226672c3d61b9",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/audit_inventory.py",
+      "bytes": 5716,
+      "lines": 97,
+      "sha256": "ecb30318b8af39e0b193b60f040f3c93ad59ae1e12db030d22a64da47b1f0b25",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/ensure_worker_running.php",
+      "bytes": 2460,
+      "lines": 70,
+      "sha256": "af41872ce53c36f212a5bfcfff8099f3dac8cc7d366bfc42ed31c29dcc838ad1",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/expire_report_exports.php",
+      "bytes": 1263,
+      "lines": 17,
+      "sha256": "37332261f85f9bb92cac833b5bab9fa5b3ff5f86ba5e58053eec03fdb5da88d8",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_atomic_booking.php",
+      "bytes": 2447,
+      "lines": 45,
+      "sha256": "458598fc334685c5b19ce7dee5b624d26d84be44a284fd522cc12b8ed2564aea",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_auth_refresh_sessions.php",
+      "bytes": 2367,
+      "lines": 60,
+      "sha256": "16ddb4a1bdab664bf0206e732f432a029316ad323ddf1df15bb0bce3792562b7",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_delivery_payments.php",
+      "bytes": 2431,
+      "lines": 31,
+      "sha256": "c1db116f0270a92b0dbfd9a70c58874a65a6758affb97bac8413153547ff981e",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_document_security.php",
+      "bytes": 2662,
+      "lines": 68,
+      "sha256": "3503804802355cebeccf7c6451cf372c02b12ec6cfe53ca35fed725e580a6a68",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_job_queue_reservations.php",
+      "bytes": 2779,
+      "lines": 59,
+      "sha256": "0976accc7f9ebdb95ab4025bb30e470ea9f5cfad9354367df6117cefa8995455",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_operational_architecture.php",
+      "bytes": 33847,
+      "lines": 596,
+      "sha256": "c05e9aee8cb2c3376c69e21aaee85bd706713eceb985a6f139cba1ceaa8de78d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_performance_indexes.php",
+      "bytes": 4545,
+      "lines": 91,
+      "sha256": "12e5f943aead24dde02ffbaf5e3b1301f537b002ed6dfc2d7faba4159ec39272",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_rate_limit_buckets.php",
+      "bytes": 1724,
+      "lines": 48,
+      "sha256": "e36c951f3f23ca07d4f8336466a446361e336538b646cd0c78c32d118058e6e5",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_report_exports.php",
+      "bytes": 493,
+      "lines": 9,
+      "sha256": "4b4e52e3d60d426c645003365d913d9170b509d79ad227847728ce623cfb6a2c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/migrate_spatial_capabilities.php",
+      "bytes": 2658,
+      "lines": 65,
+      "sha256": "58ab989bdf47f53fff411e47abb6c20924401a8412da6180b7e1fb720c6ababb",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/provision_app_db_user.php",
+      "bytes": 4020,
+      "lines": 118,
+      "sha256": "83eec54dee3c0c06bc7db93c50a7a42843babc8cb333efdfe74eeeda7b674469",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/purge_expired_auth_refresh_sessions.php",
+      "bytes": 617,
+      "lines": 20,
+      "sha256": "e1606168fa7a0cf48474ac2071de8f57206600186bc105d0ea56798185981a72",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/purge_expired_kyc_documents.php",
+      "bytes": 1657,
+      "lines": 41,
+      "sha256": "7a6245ee21552575e19dd17f80914f8e8f670747db09d5d0250e6c964816c966",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/purge_expired_location_events.php",
+      "bytes": 417,
+      "lines": 6,
+      "sha256": "411049906387b05c88dccc82983737f900ce7582a0fa5a5344f3cbe9b49ca4fa",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/purge_expired_rate_limit_buckets.php",
+      "bytes": 530,
+      "lines": 17,
+      "sha256": "65765f865ccc562f0eb54e5e609546854fd1ca991c67a2c12ec9ce95ab6d3a0c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/purge_stale_file_cache.php",
+      "bytes": 505,
+      "lines": 12,
+      "sha256": "e9e2504d5ae0633b8dc3d8998049d7469f18992f6d4aba74095a8225b82e9eaa",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/queue_worker.php",
+      "bytes": 16919,
+      "lines": 393,
+      "sha256": "4c3ac31e2521a9ebfed4e2830513943904a43ba5edf791b5374fdb31e0d90790",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/run_all_maintenance.php",
+      "bytes": 825,
+      "lines": 22,
+      "sha256": "6b5ebd066cff60a3680e80cea830c40814bb0a18f333d2db6c79f8aaf3dac2fc",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/run_worker.php",
+      "bytes": 314,
+      "lines": 12,
+      "sha256": "34e21b7bd6bd34fbf26bffbfd56d95a012f17f01049750cc728f05a1dcefd467",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/seed_demo_accounts.php",
+      "bytes": 2854,
+      "lines": 43,
+      "sha256": "b3b98331d1c9b7993a357d92aa8fe0bed7c8712e85d809ee94500c0247987b99",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/scripts/verify_payment.php",
+      "bytes": 1237,
+      "lines": 19,
+      "sha256": "5a276ac5ffd3c993152ccdf5bde8c58d0ad1cb941566615dbb42818b3947c422",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/storage/.htaccess",
+      "bytes": 587,
+      "lines": 18,
+      "sha256": "330072cbd321b2135b802d700c42aa423fa91283bc0684a6c2875c077d554a33",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "backend/tests/support/BookingFixture.php",
+      "bytes": 5082,
+      "lines": 64,
+      "sha256": "bd3c8e1c6f2f6ec864c02d2554868207bbfd6870df660e81c70d369b37b8aa03",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/support/PaymentFixture.php",
+      "bytes": 4931,
+      "lines": 74,
+      "sha256": "7bdf5bf53878fe94a5db5b62cc7e2aeaf0cba9276530b01967228ef68e63809e",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/support/RedisQueueTestClient.php",
+      "bytes": 2861,
+      "lines": 69,
+      "sha256": "f315e34de575770bcca119d95dfc1c4ab428d56b99a118db78905f5b462285df",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/test_deadlock_retry.php",
+      "bytes": 3802,
+      "lines": 99,
+      "sha256": "7c4f7195cb0e20c00550a95d51d99848e821e3ceb070ae921971d2de294dd35d",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_atomic_booking.php",
+      "bytes": 5666,
+      "lines": 65,
+      "sha256": "5d3c09413a671a5ec1554a9fadf349e9978ed2c04222804c71f4c7d42a967334",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_atomic_booking_mysql.php",
+      "bytes": 4962,
+      "lines": 58,
+      "sha256": "b9b3efe4d83ce917320a7fa499345059b864033ff33c62c3a1ce51f621688a6c",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_audit_helpers.php",
+      "bytes": 2651,
+      "lines": 42,
+      "sha256": "d9fbdd6bc3a18a04944b12ec80f0bb77f535be06a3693ed2ad6bbf57ebaeaec5",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_authorization_policy.php",
+      "bytes": 1194,
+      "lines": 31,
+      "sha256": "22c6265f00a3f8df4eefe136824e8c7953740214931d28cba2afd5470c1b8a1d",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_broadcast_batching.php",
+      "bytes": 1030,
+      "lines": 22,
+      "sha256": "72f28db01983fa48d84e1cf15da28d97905dcdc7dd8be590baa87b926b0a5486",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_client_ip_resolution.php",
+      "bytes": 3064,
+      "lines": 72,
+      "sha256": "ac36a8b649d1cf9a1b09eb502d32c22fd8253feaa6d20a284a8ec6fdba13061c",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_cors_policy.php",
+      "bytes": 959,
+      "lines": 21,
+      "sha256": "d17857421530dcf0e14779540a1efcfe009333df3c24772fd0d1498b22240698",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_credential_configuration.php",
+      "bytes": 1074,
+      "lines": 24,
+      "sha256": "79596c5b8c93449f8dedc2262eebf7cefe4195d639af0dee941b73e0d5142936",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_decoupled_scaling.php",
+      "bytes": 2036,
+      "lines": 46,
+      "sha256": "0e6ccb669d8b667fc028de470196c49db15e1a98b2111b1a3210801df4d671b8",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_delivery_payments.php",
+      "bytes": 13708,
+      "lines": 143,
+      "sha256": "092cffc44c932a181d02a7117916317c4a520d318e2e903e3c9ddac19a993051",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_delivery_payments_mysql.php",
+      "bytes": 5700,
+      "lines": 77,
+      "sha256": "4337191d2e428675f0a3ddcee601ef80b2f3daf36309f1e47f4c80a45b67c7f1",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_delivery_resolution.php",
+      "bytes": 8892,
+      "lines": 134,
+      "sha256": "6edd41fa188482ef8fd7306aee3c6e81458c6e4739eefa9933ed9f45f2c1f3cb",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_document_storage_security.php",
+      "bytes": 5088,
+      "lines": 138,
+      "sha256": "4ced7332fca5712bfd41785958984a3a84d0d414393cecd45d3afa675ae77cd0",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_driver_delivery_progress.php",
+      "bytes": 11876,
+      "lines": 162,
+      "sha256": "f2c8cfff2f7b17514b7150ec59f7f4ebc4dd1a7ba67579f3758952f3c93d3836",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_enterprise_boundaries.php",
+      "bytes": 13127,
+      "lines": 124,
+      "sha256": "346c1b24b3f77f8b939c9f92be5bc39d9602f51e0c88d37c035342282d9b2422",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_integration_contracts.php",
+      "bytes": 5558,
+      "lines": 104,
+      "sha256": "2c4be9eb4e4511553a154f4999495b201226c7044b4420c1f62cca7724224fb3",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_job_queue.php",
+      "bytes": 9625,
+      "lines": 161,
+      "sha256": "f45fd571303e4630ed38243de2847e8b79c64a8b6e26a8bde795f87ebc5deb43",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_job_queue_mysql.php",
+      "bytes": 5905,
+      "lines": 96,
+      "sha256": "e7006f224cc25edcd4b84466c07f0deecacf4268145f175eab4fa744d2d04c53",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_kano_address_validation.php",
+      "bytes": 1520,
+      "lines": 32,
+      "sha256": "9ba0e6f15abafd15e3a4082117767e1c331d4a45d0fa99ab141d6ba74d3a2c34",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_kpi_caching.php",
+      "bytes": 1362,
+      "lines": 34,
+      "sha256": "124064f2c71ed6bdac2a8f4f66e8f3a96b388631711e5ceae4f3d8597133327e",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_notification_catalog.php",
+      "bytes": 824,
+      "lines": 31,
+      "sha256": "18e8ab06d4eedbbff5986506f2403c1b5ffcd39375effe79b82a2e48a0dd15eb",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_operations_workflow.php",
+      "bytes": 6615,
+      "lines": 73,
+      "sha256": "2cb5b7b984013b84cdb50f0defd6b7fd8cd1578c62e1bc1877deb85b678bf5c0",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_pending_deliverymen_query.php",
+      "bytes": 575,
+      "lines": 14,
+      "sha256": "41f01ccbb03194839f27b234816b79f34c42984657bf103b0cdee0d21a718b77",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_rate_limiter_proxy.php",
+      "bytes": 3703,
+      "lines": 66,
+      "sha256": "8fbaf6f1662be06c67350aef60559e02a4d4b0ec042fdcd958ecdeb223ad268d",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_redis_queue_concurrency.py",
+      "bytes": 4886,
+      "lines": 120,
+      "sha256": "4adf7fa5b26e50e2f4e746d5343c360c9851c16eb0352b08104dcc406d32068b",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_redis_readiness.php",
+      "bytes": 1589,
+      "lines": 25,
+      "sha256": "60aa9585c7d71fc8ab8a9fcb411105ab350ace61d636dcd0c8ee4256563ea170",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_refresh_and_exports.php",
+      "bytes": 6679,
+      "lines": 81,
+      "sha256": "cafd93602ff3f4713f7f6e3a07219d82c0f0a6c576b54785786d10976531dc7d",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_runtime_boundaries.php",
+      "bytes": 6207,
+      "lines": 62,
+      "sha256": "ffeabaf26ce5f78d48d117419073083a5feef134bc85b7469b10a2f2d44772f9",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_spatial_geofencing.php",
+      "bytes": 1802,
+      "lines": 39,
+      "sha256": "f2e310843e4bd73a1b22c414de6ab0c536d19296f619f138c042149fe3b6f3f6",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_telemetry_isolation.php",
+      "bytes": 922,
+      "lines": 20,
+      "sha256": "c04b2c363ea38b14038fa6d54e4450f8c12d85cb1d4fd68b27ce00bb7ba051d1",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_tracking_privacy.php",
+      "bytes": 1935,
+      "lines": 40,
+      "sha256": "433ccfbb7302c270ea7fab95a4b2fef58f2eee72b5d314eb74bba5b51fbb36fd",
+      "category": "test"
+    },
+    {
+      "path": "backend/tests/verify_worker_daemon.php",
+      "bytes": 7543,
+      "lines": 147,
+      "sha256": "71b8c87b727ae6b89aeb31ed8e5a454bf0fed728fa08b62377dd0c879e4d1d76",
+      "category": "test"
+    },
+    {
+      "path": "frontend/.env.example",
+      "bytes": 1933,
+      "lines": 42,
+      "sha256": "09ef029047423df442e1df585e1d49a82f2d61330d6b8d78ef364edb1e444c55",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/.gitignore",
+      "bytes": 310,
+      "lines": 23,
+      "sha256": "d373417ea2a8844e3b7a1515aab123e90fbeb4b7225144d55d243d9f6f04f73a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/README.md",
+      "bytes": 3359,
+      "lines": 70,
+      "sha256": "70eafbc7a5fd466aa3213b5a7e1b2a41383cbe5d4e6fc5f4582efc58bdb509d1",
+      "category": "documentation"
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "bytes": 685643,
+      "lines": 18848,
+      "sha256": "d920f1a5dc8442b9dcd03983a1b679fe4129cb975e042975fa50f7296a0c5ad7",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/package.json",
+      "bytes": 1506,
+      "lines": 58,
+      "sha256": "2315535ea4cef3998223f120b239ea9562daccda28e42c565fa0b93722d63b16",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/public/.htaccess",
+      "bytes": 2773,
+      "lines": 56,
+      "sha256": "ec2e3a50ba1e6eeb456031da195ad316c9070b6605785cd3afb8c36a9e8ab897",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/public/favicon-16x16.png",
+      "bytes": 873,
+      "lines": null,
+      "sha256": "cda29a7811f8a7bb79f18186eaf3b2aa29ceb8e7f840a22edd35415b307a2349",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/public/favicon-32x32.png",
+      "bytes": 2451,
+      "lines": null,
+      "sha256": "239a5a979da431a5c56e2490801a003913de3cf5498847459942acd85c7ce337",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/public/favicon.ico",
+      "bytes": 766,
+      "lines": null,
+      "sha256": "e2b827e4b88c6c16eaad3b695faff1d18f82ec8a5eefea9d42e7a501a8dc8851",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/public/index.html",
+      "bytes": 2003,
+      "lines": 35,
+      "sha256": "f3f31ee45fdb14eafc93497b70f826f8968ea66367a8342407f1a1afbb7af450",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/public/logo.png",
+      "bytes": 278173,
+      "lines": null,
+      "sha256": "0f6bf7b5c9ac472d69e321aa70fedfbca1877431573685ea9c6758e2c7b517ac",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/public/logo.webp",
+      "bytes": 68384,
+      "lines": null,
+      "sha256": "19c426e425c35768a79331c6c9e3d02f2e777878218c09065b2a58fac72883d5",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/public/logo192.png",
+      "bytes": 48614,
+      "lines": null,
+      "sha256": "4561389729b0dfbd15e205c7840aa996a14cfecaebb4929bc460d5e4a420fcac",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/public/logo512.png",
+      "bytes": 265861,
+      "lines": null,
+      "sha256": "b7759f27e8a7f703284003f003775b8d4f230fa428753b328e73f40c253a31a4",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/public/manifest.json",
+      "bytes": 581,
+      "lines": 30,
+      "sha256": "b9367d45cc4acfcbdd4f545ddbf8b0df8fbb82ac6930047adb77f18c223ccf39",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/public/robots.txt",
+      "bytes": 67,
+      "lines": 3,
+      "sha256": "90d24bc3bf698ac1e173739502298ccca72adf1f564fab05f484b8c48d1cadd2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/scripts/deploy-backend-build.js",
+      "bytes": 6937,
+      "lines": 118,
+      "sha256": "94844d7c06e2b346cc208be3287bcd54e163b10af1ae6b94debbf3368f0baa7a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/scripts/deploy-backend-build.test.js",
+      "bytes": 2348,
+      "lines": 39,
+      "sha256": "e41c8184be7104b574798a6a0088ef42dde7722c217f001e458779b05a84510c",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/App.css",
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/App.js",
+      "bytes": 8103,
+      "lines": 163,
+      "sha256": "940bd63a69e7d1ef2ce1cce8d87e000c57dae3d1ba82ef3d03fef29a889bbaeb",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/App.test.js",
+      "bytes": 1110,
+      "lines": 29,
+      "sha256": "c69a6fdacb688503ab5f9728d60e49473b9dfd30aa154169ecd9ae21e84442d9",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/api/client.js",
+      "bytes": 5751,
+      "lines": 139,
+      "sha256": "168a6db31768d8ec134cb8f0a5ae2c21364b7f58dff59400403bd052d156ec88",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/api/client.test.js",
+      "bytes": 2381,
+      "lines": 54,
+      "sha256": "9f62ec76e97392d17db806d65e81223ac1049f046716b006f1def16930c183f7",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/api/queryClient.js",
+      "bytes": 287,
+      "lines": 12,
+      "sha256": "b451a18cad8f3d92b3f7eb873cbcb7ac24fafad5c883d841d755e4bb7ad90a72",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/api/response.js",
+      "bytes": 328,
+      "lines": 8,
+      "sha256": "595ab72eb5990b447b8f5b964dcfe751905c0ef2d7599a02d34c2ccc9f9e84bf",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/api/response.test.js",
+      "bytes": 531,
+      "lines": 13,
+      "sha256": "e9539ece16eaa969dd3bf59f5250945344bd0e05e0df1013df2e908f734e8bcf",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/assets/logo.png",
+      "bytes": 278173,
+      "lines": null,
+      "sha256": "0f6bf7b5c9ac472d69e321aa70fedfbca1877431573685ea9c6758e2c7b517ac",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/src/assets/logo.webp",
+      "bytes": 68384,
+      "lines": null,
+      "sha256": "19c426e425c35768a79331c6c9e3d02f2e777878218c09065b2a58fac72883d5",
+      "category": "asset"
+    },
+    {
+      "path": "frontend/src/components/AboutPage.js",
+      "bytes": 7866,
+      "lines": 129,
+      "sha256": "7b21efdcb764b7a860178e7cc7f3ff3ea5257ce651723a919ffbbedd61ac8803",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/AdminDashboard.js",
+      "bytes": 22313,
+      "lines": 432,
+      "sha256": "753b6c59261bdfaa38e1799bc01e6ea1b4904ad62f1d22c239e4c70a5814fc32",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/AuthContext.js",
+      "bytes": 2209,
+      "lines": 65,
+      "sha256": "8b6a5db93b6a0a6b983a98b08cd69800e8f7902fdd494e26cf598a54f9340eef",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/CareersPage.js",
+      "bytes": 6996,
+      "lines": 146,
+      "sha256": "70e0cfb97d391d7706caf08ec9461b20f5f1b399615b5c418b0955704a403dc2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/ClientDashboard.js",
+      "bytes": 23307,
+      "lines": 418,
+      "sha256": "372f9eb90da4225ace3872501c8b084445fd5b589eadc2d8c27b94225587ef1b",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/ContactPage.js",
+      "bytes": 5961,
+      "lines": 117,
+      "sha256": "461ba1a60ee6a60a5f29366bc607337bc8acefd759ea3d240bd32229614e97ca",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/CoveragePage.js",
+      "bytes": 27861,
+      "lines": 598,
+      "sha256": "41d96c2ec46f0693c4b5c317de431da728cea97f9389932000836c709d6cbaef",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/Dashboard.js",
+      "bytes": 1607,
+      "lines": 49,
+      "sha256": "f1d72467a5d22674415ea50ac85cd8db027639cf35617550aa99afd7a32ee355",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/DeliveryPersonDashboard.js",
+      "bytes": 19374,
+      "lines": 371,
+      "sha256": "0eefc1d1ef01c7f6b27ec476399c0aadf572dabccd58bfd3ae4e5922c490abdc",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/Login.js",
+      "bytes": 6361,
+      "lines": 134,
+      "sha256": "a339e20d38fe056ba46803fa2727df41f76acb2d09cf4a819bcffc41ce5fdaae",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/PaymentReturn.js",
+      "bytes": 2112,
+      "lines": 32,
+      "sha256": "4a80c35f770b7a8a9d28c404190a74b693754c487ed5e4e6c2612419657e0b2f",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/PaymentReturn.test.js",
+      "bytes": 1550,
+      "lines": 24,
+      "sha256": "9032675ccd897dd1faa7bd1d2b2dabb6e773ad956a0d81e993dfa9eb47b42932",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/components/ProtectedRoute.js",
+      "bytes": 1490,
+      "lines": 44,
+      "sha256": "06e600b3cf3ddf787a4cad9a0b57553030cd5b1fd79f0f2ca85d6c72b1b4c0e5",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/RegisterClient.js",
+      "bytes": 7468,
+      "lines": 125,
+      "sha256": "304bc389e85fe7da020f1c660dac216599dee97e0695a2581e5fcff62823f93d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/RegisterDelivery.js",
+      "bytes": 7798,
+      "lines": 129,
+      "sha256": "2fe04047dc88f6342d4836ebf33e9c64476f45201dd4c9647c82b875329ae215",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/TermsAndConditions.js",
+      "bytes": 3616,
+      "lines": 67,
+      "sha256": "10e1221c8aee64e04ccd0bc73b35daa4d57d3465c88d81c0c4c00c4693d895af",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/ThemeContext.js",
+      "bytes": 1270,
+      "lines": 34,
+      "sha256": "4e70af8ad8929772aea8aafa0a16771fe7ac59444bf3ae234acf75a170e6b8bd",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/TrackPage.js",
+      "bytes": 990,
+      "lines": 35,
+      "sha256": "b99d8c9bab3ef655101a5ff4f0d18aa64192c603e4b910095b6f2fe15ec60b9c",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/ApprovalsTab.js",
+      "bytes": 11710,
+      "lines": 196,
+      "sha256": "82f7ae2e18dbd503339d6c293995c22cfe1e257c15d4d3832826ffd28f5e2384",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/AuditTab.js",
+      "bytes": 6571,
+      "lines": 160,
+      "sha256": "dfd1a3b9ff10e100b50b036b24d8110bcff7f3e9490e04bfa914083fa6440ea6",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/ClientKycTab.js",
+      "bytes": 14097,
+      "lines": 280,
+      "sha256": "ed2104edbf079e7887a970b48537e260c4f1299981ea7c3a72a1baad7bf73361",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/DeliveriesTab.js",
+      "bytes": 28731,
+      "lines": 589,
+      "sha256": "00231f3d0431b82668f46f9ba13443d856e6b896e2ebda3aa80e43ad3a7214e8",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/DeliveriesTab.test.js",
+      "bytes": 2250,
+      "lines": 39,
+      "sha256": "6e69ade79dc60f4a25627462a609c0aeb3169cd737c1dc18fb6ef0df6458e1a5",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/components/admin/DocumentReviewTab.js",
+      "bytes": 32429,
+      "lines": 575,
+      "sha256": "544ef6d6c331cf0e0379b8ef2a3a0860a4b4b81a5c66960e2b00bb7aca2281f2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/ExceptionsAlertsTab.js",
+      "bytes": 18654,
+      "lines": 299,
+      "sha256": "cbc3b24d6c51dbd26854175d2af6679422727aa5be4e9beeb290f8cc40a03f91",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/ExceptionsAlertsTab.test.js",
+      "bytes": 3184,
+      "lines": 52,
+      "sha256": "9d3802accfd47a475a02853c6dd347cba788dc67da48282bde55c9ffa4d05858",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/components/admin/FinanceOverviewTab.js",
+      "bytes": 7046,
+      "lines": 149,
+      "sha256": "586895cc1a6e3419623b4e2f102f361256955f28160d0038d49ecaebcdda9b47",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/LiveTrackingTab.js",
+      "bytes": 9924,
+      "lines": 188,
+      "sha256": "925f724e6c7c76cc9b971d0665254c201a84adbdd685f2f06f42f73070a1abe8",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/OperationsTabs.js",
+      "bytes": 31376,
+      "lines": 663,
+      "sha256": "1ab0be8bad36509bf36182e2528ed80ab3e0ab28a2fcddc5ffc4684f05c9b674",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/OverviewTab.js",
+      "bytes": 10687,
+      "lines": 184,
+      "sha256": "0373969f04ff17469cccd4ae775f710bfe1a32e4455256d5d34fad29fd338af7",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/admin/ReportsTab.js",
+      "bytes": 11422,
+      "lines": 192,
+      "sha256": "c243e9bb10423e9bfaea52d06aa70f5b0a3990bf8f3ed5ee8fb9c5c3c379c321",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/BookDeliveryTab.js",
+      "bytes": 40454,
+      "lines": 767,
+      "sha256": "70bb6151f8b19af8bb4ae8c1a9e6483a2230a67b9034f1eaa47fb85a57f10d4d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ClientKycTab.js",
+      "bytes": 13502,
+      "lines": 293,
+      "sha256": "42d04fa7512fe85268875a206cd305f3eee56c1a998c87fd66c4867f10dd65a7",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ClientNotificationsTab.js",
+      "bytes": 96,
+      "lines": 3,
+      "sha256": "e33f80e54f320deb6f5b1686f7c2bbdc72b7a99bce1fa6a6ed22219ed12d0f08",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ClientOverviewTab.js",
+      "bytes": 27246,
+      "lines": 479,
+      "sha256": "e6935c7e9c2d360523aed7af7168cc5959d2cc691436188c934ab24a86c1aa8f",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ClientPaymentsTab.js",
+      "bytes": 26956,
+      "lines": 432,
+      "sha256": "998fe2ad437df1345e41ca2f14e25d33f4428a2500ec21b7fea4d575e80541f3",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ClientProfileTab.js",
+      "bytes": 4345,
+      "lines": 82,
+      "sha256": "a5d33809b8555cd03feeae8940dab7bbecb759743df150f78ac8887098255521",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ClientTrackingTab.js",
+      "bytes": 27604,
+      "lines": 482,
+      "sha256": "df020d961534c9d0b526810faab8560837e4b3fdd9fd892b897975516d9db870",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/NotificationBell.js",
+      "bytes": 11836,
+      "lines": 261,
+      "sha256": "5cf4892d6cd7362b1d1c3328143583304256d831aadcca92b6364b68c8e9c901",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ShipmentHistoryTab.js",
+      "bytes": 22395,
+      "lines": 401,
+      "sha256": "49afbc2a02ff78c2fa0ddcc124da619fc7c957449c50f91f59d233fa907537f8",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/ShipmentOverviewCards.js",
+      "bytes": 6218,
+      "lines": 124,
+      "sha256": "396a7adfe29a16f729f6df8578866605e0bc90569317449052a1dc2f6790e383",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/client/TrackingModal.js",
+      "bytes": 24351,
+      "lines": 404,
+      "sha256": "0e3093d75b224507f735a3a02e5c0833388f917e69763cf17ef1618dedaca33e",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/CursorPagination.js",
+      "bytes": 4160,
+      "lines": 102,
+      "sha256": "1967f6397361e2442456033ea328f31bdb491b90cc9ba57c806a77359682f570",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/EmptyState.js",
+      "bytes": 515,
+      "lines": 14,
+      "sha256": "d99673b4bda6a37c12c2e65ec6c993ffcfcd2a635196646f3d423b73fc286dfe",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/ErrorBoundary.js",
+      "bytes": 5121,
+      "lines": 122,
+      "sha256": "664fbf7a28fd96daa273e419003c6de0e6fe7a260178e3f19b83261c2992e1d4",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/Icon.js",
+      "bytes": 1226,
+      "lines": 27,
+      "sha256": "33efba88ac3c5687e48c77688767c6996d104e9094a908ca3c87e5ee275d7bc5",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/KycStatusBanner.js",
+      "bytes": 1674,
+      "lines": 19,
+      "sha256": "f218ee1f14c955dea822df52b01e8f1fe64d31b9fdb72836086eb393b13c1e62",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/LiveLocationMap.css",
+      "bytes": 1373,
+      "lines": 70,
+      "sha256": "5e8d37f8d1f4f7af1ce47670c9902f37eb598b7d400e6b9f313378c9eb899ba8",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/LiveLocationMap.js",
+      "bytes": 4495,
+      "lines": 83,
+      "sha256": "c07b53aa7b15b6092a09dd5be7ccb373d684e7e69ced263be25ea3282c0ec68e",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/NotificationInbox.js",
+      "bytes": 5732,
+      "lines": 77,
+      "sha256": "47330a1a073ef11c0d642d9631fca5484a18e2bfc80871ee5c2c78ecb7fec9bf",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/NotificationInbox.test.js",
+      "bytes": 3117,
+      "lines": 48,
+      "sha256": "10169a61bf226882e36b147bbb384da7f30a542862e43d7ddf569ef14230fa48",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/components/common/Pagination.js",
+      "bytes": 6532,
+      "lines": 151,
+      "sha256": "e7360c6a19808f0a4f561c47fb907a31917a3262cb0a49df43ea19819370f59a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/PaymentReviewPanel.js",
+      "bytes": 6762,
+      "lines": 84,
+      "sha256": "fd39b12c293eb546d4ba17dd1701e779e3fc155db012ec5cb5421bb5a8ac8807",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/PaymentReviewPanel.test.js",
+      "bytes": 3866,
+      "lines": 57,
+      "sha256": "4f980c9a74ee301dbdc4c160a3ad9b7448648a056638d02ef8e6dbc7ecebb60c",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/components/common/QueryState.js",
+      "bytes": 955,
+      "lines": 31,
+      "sha256": "6d4210e6b87fc9dc79d64bd3cacadb9427f7d28ef67e59a30a2596cf4a68a1a6",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/ReportExportButton.js",
+      "bytes": 2402,
+      "lines": 40,
+      "sha256": "b436f75bd8d88798524e4f96c06dd98c47ae3a1602566487b7e160bf3852d77a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/SensitiveValue.js",
+      "bytes": 1390,
+      "lines": 44,
+      "sha256": "d5e27894d2a3ea7a4c30c9296fd2ee5abe5c1c9893bc0ef82c46c8e65fc70448",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/SkeletonLoader.js",
+      "bytes": 4001,
+      "lines": 91,
+      "sha256": "2cd0f4f91729e82766a585be9f31d3b1c2dc442174c5947305cf290c34ac79da",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/ThemeToggle.js",
+      "bytes": 719,
+      "lines": 22,
+      "sha256": "604c90f298c37a1064a8184b9d568edb820a085ffff8b3138d48fa85d8231c88",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/Toast.js",
+      "bytes": 1702,
+      "lines": 65,
+      "sha256": "ea8b137ceee09ff9469e166cbfe74142f95f870042277d4a3c508140517218ee",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/VerifiedBadge.js",
+      "bytes": 302,
+      "lines": 6,
+      "sha256": "87f3bf74108ace82b00ae66adf252fa6864630b1e6c1cae1f9a006badbbe1817",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/common/formValidation.js",
+      "bytes": 1899,
+      "lines": 40,
+      "sha256": "609b12d072bc3fc91e4ecd6c4a97ad7e4d0cb5b0be574f5c2cff1ef63ac6087b",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/ActiveDeliveriesTab.js",
+      "bytes": 27295,
+      "lines": 554,
+      "sha256": "4f61727d7f2a78f2bcb5685b8938bb9ce884fe5cced1aa3b1bdf86c5ac1ffe42",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/ActiveDeliveriesTab.test.js",
+      "bytes": 5095,
+      "lines": 91,
+      "sha256": "45a2a1b4de713a704da0c4b0923125eefd31fc0d1f44c1d90daf9229b0517c94",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/components/driver/AvailableJobsTab.js",
+      "bytes": 13983,
+      "lines": 255,
+      "sha256": "cce8a1f2c3a43f413d366feee3306d11dd7decbcacb8e1e15aeb70d5c7aa0dcc",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/CompletedDeliveriesTab.js",
+      "bytes": 3709,
+      "lines": 85,
+      "sha256": "99c54a13ebd1cb174428486a7d1526e1a5daf1082edd6b5f128926e8a5ea3f9a",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/DriverNotificationsTab.js",
+      "bytes": 96,
+      "lines": 3,
+      "sha256": "e33f80e54f320deb6f5b1686f7c2bbdc72b7a99bce1fa6a6ed22219ed12d0f08",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/DriverOverviewTab.js",
+      "bytes": 24447,
+      "lines": 454,
+      "sha256": "3055598633964507352201828c523aef0cd32db45c756ed0fa8dbcaa6cc44b64",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/DriverPerformanceTab.js",
+      "bytes": 7953,
+      "lines": 137,
+      "sha256": "9430b69edb55d00fb286e9db658d63e887a089c426cd3ccdd2200e225597bcb2",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/EarningsTab.js",
+      "bytes": 6094,
+      "lines": 152,
+      "sha256": "d8f49ecf2a26d9df73288d79934afd149853d9463af8cd02e8a2f451c2e3ef06",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/driver/PartnerOperationsTab.js",
+      "bytes": 25869,
+      "lines": 535,
+      "sha256": "bd5a7d279fa144104d194170103325fc523ccda9cdd01f45b041a9cf9ad8141b",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/CoverageSection.js",
+      "bytes": 2622,
+      "lines": 51,
+      "sha256": "21119a0b35a7ee222410bcd8247aab9dfd0f149fe36aaf8bc947aaf66f8289c1",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/Footer.js",
+      "bytes": 4078,
+      "lines": 80,
+      "sha256": "14909d20ddcdd8daa296fe44c181d7d6d45b252380b419a3c915aef2b1afa4d3",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/HeroSection.js",
+      "bytes": 2050,
+      "lines": 47,
+      "sha256": "f69c225466e0254922059c52b46c00f969c16ebca767affdff766fdb63d88ec1",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/HowItWorksSection.js",
+      "bytes": 2214,
+      "lines": 58,
+      "sha256": "ccc42e72c00f0294bb60aab04a1ae7a1411e33c9fd7eec6e78530acb20df3dce",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/Navbar.js",
+      "bytes": 5822,
+      "lines": 108,
+      "sha256": "ab2ca0b04a8badef8f36e41c7e89436b5d356f2988580e5b4af1f1f09ee36688",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/ReadyToShipCTA.js",
+      "bytes": 1542,
+      "lines": 33,
+      "sha256": "e5376aeb1af778ccc3a45e12e66de71205f69a87037ce57abbc68e3b2072fa73",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/SecurityTrustSection.js",
+      "bytes": 2334,
+      "lines": 54,
+      "sha256": "03553c8fba2276776e53dca814cd4f566986e6a6ad181eff9414ebf2026d49bf",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/ServicesSection.js",
+      "bytes": 4921,
+      "lines": 98,
+      "sha256": "b6cac8b0b8357296e7badfa8973ee8659bd2db64a9dfb75e067cc43f51159781",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/TrackingWidget.js",
+      "bytes": 24726,
+      "lines": 412,
+      "sha256": "006c7eb2be25356c946f343beda8b1d0f69eac3df944d535d391300f283cee89",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/components/landing/TrustStrip.js",
+      "bytes": 1544,
+      "lines": 35,
+      "sha256": "898c0a8062a4af4aee114c6b71c014293cba440640f9bf4f9dbb6f6b7d8b916f",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/config.js",
+      "bytes": 340,
+      "lines": 5,
+      "sha256": "507d3b64810664669e50e1e69bb9b47c38998d50b0dee8c7f909e2518ee8b74d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/hooks/useFormValidation.js",
+      "bytes": 3616,
+      "lines": 107,
+      "sha256": "55f984bdcf648fc7b0392576f866923f66b1b8325aa7e7aaa4c2f57bd0aea8d1",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/index.css",
+      "bytes": 114636,
+      "lines": 4831,
+      "sha256": "a0c1315962388229124bb6f0975f7b5896a8fa0bdb0fef522b17a0975c6767f8",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/index.js",
+      "bytes": 540,
+      "lines": 17,
+      "sha256": "3619722c299c2e576f148e0b5809c4df171173ab9cab2a89a8b5da2d18b9090b",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/setupTests.js",
+      "bytes": 190,
+      "lines": 4,
+      "sha256": "8108bfa6eecd3cdc394592a5c7aea57788e492291f5007a2d0a925b886778690",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/utils/bookingRequest.js",
+      "bytes": 1321,
+      "lines": 24,
+      "sha256": "ec0d714f662409afb60b93184fd62a59e6194f4223f65d3acdd476c7c25b5ebe",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/utils/bookingRequest.test.js",
+      "bytes": 1396,
+      "lines": 28,
+      "sha256": "fffbdf1ffdfa13cb8bb4b3d980cc5ab662769eb94856e4c1ab7530535b48a3cc",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/utils/coordinates.js",
+      "bytes": 585,
+      "lines": 13,
+      "sha256": "a7df5b5e089ffcf91ad3c4506292bcbe030e16e7100aa46c5575e4766a74e96d",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/utils/coordinates.test.js",
+      "bytes": 606,
+      "lines": 18,
+      "sha256": "4b90d7fe8ab722f56d22f460d03a11a1437fea04a6c9d679a33d18c65976f9c9",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/utils/haptics.js",
+      "bytes": 848,
+      "lines": 27,
+      "sha256": "2b2ee91a279cd19b68f272315a72c9b1d394a5a6c91ec5be23e5e5af18e5d4dd",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/utils/payments.js",
+      "bytes": 589,
+      "lines": 11,
+      "sha256": "aba162be4fa0d30314ad16bcac59c4c9659fef603c100ac763cc298b44ff4e97",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/utils/payments.test.js",
+      "bytes": 1088,
+      "lines": 21,
+      "sha256": "86edcd3ab2516be45d9b1ad9234268dd94421678cdf4e3d6285a880a64007701",
+      "category": "test"
+    },
+    {
+      "path": "frontend/src/utils/safeReturnPath.js",
+      "bytes": 994,
+      "lines": 16,
+      "sha256": "34f6b16259fe1a04e586ca37a9a9949a36d460ef9fa3b202671bbcada3976593",
+      "category": "source-or-configuration"
+    },
+    {
+      "path": "frontend/src/utils/safeReturnPath.test.js",
+      "bytes": 596,
+      "lines": 8,
+      "sha256": "1efe66f9052583cbffe4e6633c1dce31e293923a5cf0f7b5cd1acdede23282c8",
+      "category": "test"
+    }
+  ],
+  "exact_duplicate_groups": [
+    [
+      "backend/public/favicon-16x16.png",
+      "frontend/public/favicon-16x16.png"
+    ],
+    [
+      "backend/public/favicon-32x32.png",
+      "frontend/public/favicon-32x32.png"
+    ],
+    [
+      "backend/public/favicon.ico",
+      "frontend/public/favicon.ico"
+    ],
+    [
+      "backend/public/logo.png",
+      "backend/public/static/media/logo.292d755a84c624742e1a.png",
+      "frontend/public/logo.png",
+      "frontend/src/assets/logo.png"
+    ],
+    [
+      "backend/public/logo.webp",
+      "backend/public/static/media/logo.0069c767d443bf257913.webp",
+      "frontend/public/logo.webp",
+      "frontend/src/assets/logo.webp"
+    ],
+    [
+      "backend/public/logo192.png",
+      "frontend/public/logo192.png"
+    ],
+    [
+      "backend/public/logo512.png",
+      "frontend/public/logo512.png"
+    ],
+    [
+      "backend/public/manifest.json",
+      "frontend/public/manifest.json"
+    ],
+    [
+      "backend/public/robots.txt",
+      "frontend/public/robots.txt"
+    ],
+    [
+      "frontend/src/components/client/ClientNotificationsTab.js",
+      "frontend/src/components/driver/DriverNotificationsTab.js"
+    ]
+  ],
+  "frontend_unreferenced_module_candidates": [
+    "frontend/src/components/landing/SecurityTrustSection.js",
+    "frontend/src/hooks/useFormValidation.js"
+  ],
+  "unresolved_relative_imports": []
+}
