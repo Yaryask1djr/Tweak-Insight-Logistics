@@ -296,11 +296,14 @@ const ClientDashboard = () => {
 
                     {/* Main Content Area */}
                     <main className="col-lg-9 col-md-8 dashboard-main">
-                        <KycStatusBanner 
-                            status={kyc?.kyc_status} 
-                            rejectionReason={kyc?.kyc_rejection_reason} 
-                            onAction={() => setActiveTab('kyc')} 
-                        />
+                        {/* Only show KYC banner if action is required (suppress green 'Identity verified' banner) */}
+                        {kyc?.kyc_status && kyc.kyc_status !== 'verified' && (
+                            <KycStatusBanner 
+                                status={kyc.kyc_status} 
+                                rejectionReason={kyc.kyc_rejection_reason} 
+                                onAction={() => setActiveTab('kyc')} 
+                            />
+                        )}
                         
                         <ErrorBoundary
                             resetKey={activeTab}
