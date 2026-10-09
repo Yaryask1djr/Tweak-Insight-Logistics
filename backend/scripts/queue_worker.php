@@ -344,13 +344,49 @@ exit($exitCode);
  */
 function handleExternalNotification(PDO $db, array $payload): void
 {
+    require_once __DIR__ . '/../helpers/external_notification_gateway.php';
+
     // If running in automated verification test environment, succeed with test log
     if (getenv('APP_ENV') === 'testing' || !empty($payload['test_mode']) || str_contains($payload['body'] ?? '', 'test driver') || str_contains($payload['title'] ?? '', 'Driver En Route')) {
         Logger::info('Test external notification acknowledged by worker queue', ['user_id' => $payload['user_id'] ?? null]);
         return;
     }
-    // Logging is not provider delivery. Retain retry/dead-letter semantics in production.
-    throw new RuntimeException('External notification provider is not configured; nothing was sent.');
+
+    $userId = (int)($payload['user_id'] ?? 0);
+    $recipientPhone = (string)($payload['phone'] ?? '');
+
+    // If phone wasn't passed directly, fetch user phone number from database
+    if ($recipientPhone === '' && $userId > 0) {
+        $stmt = $db->prepare("SELECT phone FROM users WHERE id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        $recipientPhone = (string)$stmt->fetchColumn();
+    }
+
+    if ($recipientPhone === '') {
+        Logger::notice('External notification skipped: user has no registered phone number', ['user_id' => $userId]);
+        return;
+    }
+
+    $title = (string)($payload['title'] ?? 'Tweak Logistics');
+    $body = (string)($payload['body'] ?? '');
+    $message = "[$title] $body";
+    $channel = (string)($payload['channel'] ?? 'sms');
+
+    if ($channel === 'whatsapp') {
+        $result = ExternalNotificationGateway::sendWhatsApp($recipientPhone, $message);
+    } else {
+        $result = ExternalNotificationGateway::sendSms($recipientPhone, $message);
+    }
+
+    if (!$result['success']) {
+        throw new RuntimeException("External {$channel} delivery failed via {$result['provider']}: " . ($result['error'] ?? 'Unknown provider error'));
+    }
+
+    Logger::info("External {$channel} notification delivered", [
+        'provider' => $result['provider'],
+        'message_id' => $result['message_id'] ?? null,
+        'user_id' => $userId,
+    ]);
 }
 
 /**
