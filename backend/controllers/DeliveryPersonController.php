@@ -10,6 +10,7 @@ require_once __DIR__ . '/../helpers/notification_service.php';
 require_once __DIR__ . '/../helpers/cache_helper.php';
 require_once __DIR__ . '/../helpers/database_transaction.php';
 require_once __DIR__ . '/../helpers/driver_delivery_progress.php';
+require_once __DIR__ . '/../helpers/telemetry_stream.php';
 
 class DeliveryPersonController
 {
@@ -296,39 +297,27 @@ class DeliveryPersonController
         $updateAvail = $db->prepare('UPDATE driver_availability a JOIN drivers d ON d.id = a.driver_id SET a.last_latitude = ?, a.last_longitude = ?, a.last_location_at = NOW() WHERE d.user_id = ?');
         $updateAvail->execute([$latitude, $longitude, $userId]);
 
-        $locationPayload = [
-            'latitude'   => $latitude,
-            'longitude'  => $longitude,
-            'accuracy_m' => $accuracy,
-            'heading_degrees' => $heading,
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
-
-        // Multi-tier fast cache (Redis / APCu / Memory / Fast file cache)
-        CacheHelper::setDriverLocation((int)$data->delivery_id, $locationPayload, 300);
-        CacheHelper::delete("admin:active_deliveries_geo");
-
-        // Fast Redis GEO & Ephemeral Key update if Redis is available
-        $redisHost = getenv('REDIS_HOST');
-        if (!empty($redisHost) && class_exists('Redis')) {
-            try {
-                $redis = new Redis();
-                if ($redis->connect($redisHost, (int)(getenv('REDIS_PORT') ?: 6379), 0.2)) {
-                    $auth = getenv('REDIS_PASSWORD');
-                    if (!empty($auth)) $redis->auth($auth);
-                    $redis->geoAdd('geo:drivers', (float)$longitude, (float)$latitude, (string)$userId);
-                }
-            } catch (Throwable $e) {}
-        }
-
-        // Write point-in-time breadcrumb to isolated telemetry table
-        $event = $db->prepare('INSERT INTO delivery_location_events (delivery_id, delivery_person_id, latitude, longitude, accuracy_m, heading_degrees, recorded_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
-        $event->execute([(int)$data->delivery_id, $userId, $latitude, $longitude, $accuracy, $heading]);
+        // Buffer telemetry in Redis (with fast fallback to MySQL and live ephemeral keys)
+        $telemetryResult = TelemetryStream::recordLocation(
+            $db,
+            (int)$data->delivery_id,
+            $userId,
+            $latitude,
+            $longitude,
+            $accuracy,
+            $heading
+        );
 
         // Initialize tracking_started_at once on deliveries table (prevents repeated row-lock churn)
         $db->prepare('UPDATE deliveries SET tracking_started_at = NOW() WHERE id = ? AND tracking_started_at IS NULL')->execute([(int)$data->delivery_id]);
 
-        Response::json(['delivery_id' => (int)$data->delivery_id, 'latitude' => $latitude, 'longitude' => $longitude, 'heading_degrees' => $heading], 'Live location recorded.');
+        Response::json([
+            'delivery_id' => (int)$data->delivery_id,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'heading_degrees' => $heading,
+            'buffered' => $telemetryResult['buffered'] ?? false,
+        ], 'Live location recorded.');
     }
 
     /**

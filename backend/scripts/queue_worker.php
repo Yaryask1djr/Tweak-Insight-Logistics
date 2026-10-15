@@ -29,6 +29,7 @@ require_once __DIR__ . '/../helpers/monitoring.php';
 require_once __DIR__ . '/../helpers/booking_outbox.php';
 require_once __DIR__ . '/../helpers/report_export.php';
 require_once __DIR__ . '/../helpers/payment_webhooks.php';
+require_once __DIR__ . '/../helpers/telemetry_stream.php';
 
 // --- Parse CLI Options ---
 $shortOpts = "q:s:m:j:h";
@@ -224,6 +225,12 @@ do {
             if ($once) { $exitCode = 1; break; }
         }
         if ($processed >= $maxJobs) break;
+        try {
+            $flushedTelemetry = TelemetryStream::flushBatch($db, 200);
+            if ($flushedTelemetry > 0) { $outboxProcessed = true; }
+        } catch (Throwable $error) {
+            Logger::notice('Telemetry batch flush in worker loop encountered error', ['error' => $error->getMessage()]);
+        }
     }
 
     // 4. Pop next job atomically

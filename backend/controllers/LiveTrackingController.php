@@ -4,6 +4,7 @@ require_once __DIR__ . '/../helpers/response.php';
 require_once __DIR__ . '/../helpers/cache_helper.php';
 require_once __DIR__ . '/../helpers/monitoring.php';
 require_once __DIR__ . '/../helpers/cursor_pagination.php';
+require_once __DIR__ . '/../helpers/telemetry_stream.php';
 
 /** Role-scoped live GPS read model. Exact coordinates are never public. */
 final class LiveTrackingController
@@ -45,14 +46,14 @@ final class LiveTrackingController
         $delivery['last_location_heading_degrees'] = null;
         $delivery['last_location_at'] = null;
 
-        // 1. Check multi-tier fast cache first (Redis, APCu, Memory)
-        $cachedGeo = CacheHelper::getDriverLocation($delivery['id']);
+        // 1. Check multi-tier fast cache first (Redis stream / APCu / Memory)
+        $cachedGeo = TelemetryStream::getLiveDeliveryLocation((int)$delivery['id']) ?: CacheHelper::getDriverLocation($delivery['id']);
         if ($cachedGeo !== null) {
             $delivery['last_location_latitude'] = $cachedGeo['latitude'] ?? null;
             $delivery['last_location_longitude'] = $cachedGeo['longitude'] ?? null;
             $delivery['last_location_accuracy_m'] = $cachedGeo['accuracy_m'] ?? null;
             $delivery['last_location_heading_degrees'] = $cachedGeo['heading_degrees'] ?? null;
-            $delivery['last_location_at'] = $cachedGeo['updated_at'] ?? null;
+            $delivery['last_location_at'] = $cachedGeo['recorded_at'] ?? $cachedGeo['updated_at'] ?? null;
         }
 
         // 2. Query isolated telemetry event store ONLY on cold cache miss

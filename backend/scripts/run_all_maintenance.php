@@ -10,6 +10,7 @@ $jobs = [
     'purge_expired_location_events.php',
     'expire_report_exports.php',
     'purge_stale_file_cache.php',
+    'flush_telemetry_buffer.php',
 ];
 echo 'Maintenance started at ' . gmdate('c') . PHP_EOL;
 $result = MaintenanceRunner::run($jobs,
