@@ -36,7 +36,15 @@ $defaultOrigins = 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:
 $allowedEnv = getenv('ALLOWED_ORIGINS') ?: $defaultOrigins;
 $allowedOrigins = array_map('trim', explode(',', $allowedEnv));
 
-if (!empty($origin) && in_array($origin, $allowedOrigins, true)) {
+$isLanDevOrigin = false;
+if (!empty($origin) && strtolower(getenv('APP_ENV') ?: 'development') !== 'production') {
+    $parsedHost = parse_url($origin, PHP_URL_HOST);
+    if ($parsedHost && filter_var($parsedHost, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+        $isLanDevOrigin = true;
+    }
+}
+
+if (!empty($origin) && (in_array($origin, $allowedOrigins, true) || $isLanDevOrigin)) {
     header("Access-Control-Allow-Origin: {$origin}");
     header("Access-Control-Allow-Credentials: true");
     header("Vary: Origin");

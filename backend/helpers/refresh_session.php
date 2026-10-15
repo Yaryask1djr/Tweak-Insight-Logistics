@@ -175,7 +175,14 @@ class RefreshSession
 
         $origin = trim((string)($_SERVER['HTTP_ORIGIN'] ?? ''));
         $requestedWith = strtolower(trim((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')));
-        if ($requestedWith !== 'xmlhttprequest' || ($origin !== '' && !in_array($origin, self::allowedOrigins(), true))) {
+        $isLanDev = false;
+        if ($origin !== '' && !self::isProduction()) {
+            $parsedHost = parse_url($origin, PHP_URL_HOST);
+            if ($parsedHost && filter_var($parsedHost, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                $isLanDev = true;
+            }
+        }
+        if ($requestedWith !== 'xmlhttprequest' || ($origin !== '' && !in_array($origin, self::allowedOrigins(), true) && !$isLanDev)) {
             throw new RuntimeException('Refresh request origin is not allowed.');
         }
     }
