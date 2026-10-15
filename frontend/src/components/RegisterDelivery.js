@@ -48,7 +48,9 @@ const RegisterDelivery = () => {
             showToast.success(succMsg);
             setTimeout(() => navigate('/login'), 2500);
         } catch (err) {
-            const errMsg = err.response?.data?.message || 'Registration failed. Please try again.';
+            const errMsg = err.response?.data?.message
+                || (err.request ? 'Unable to reach the server. Please check your network connection.' : err.message)
+                || 'Registration failed. Please try again.';
             setIsError(true);
             setMessage(errMsg);
             showToast.error(errMsg);

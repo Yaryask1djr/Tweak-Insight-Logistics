@@ -53,7 +53,9 @@ const Login = () => {
                 navigate('/dashboard');
             }
         } catch (err) {
-            const errMsg = err.response?.data?.message || 'Login failed. Please check your credentials.';
+            const errMsg = err.response?.data?.message
+                || (err.request ? 'Unable to reach the server. Please check your network connection.' : err.message)
+                || 'Login failed. Please check your credentials.';
             setError(errMsg);
             showToast.error(errMsg);
         } finally {

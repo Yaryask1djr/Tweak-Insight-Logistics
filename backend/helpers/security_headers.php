@@ -63,6 +63,7 @@ class SecurityHeaders
      */
     private static function contentSecurityPolicy(): string
     {
+        $isProd = strtolower((string)getenv('APP_ENV')) === 'production';
         $policy = [
             "default-src 'self'",
             "base-uri 'self'",
@@ -73,15 +74,10 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             "font-src 'self' data: https://fonts.gstatic.com",
             "img-src 'self' data: blob: https://*.tile.openstreetmap.org",
-            "connect-src 'self'",
+            $isProd ? "connect-src 'self'" : "connect-src 'self' http://localhost:* http://127.0.0.1:* http://192.168.*:* ws: wss:",
             "worker-src 'self' blob:",
             "manifest-src 'self'",
         ];
-
-        // Upgrade insecure requests is always active in production, active in
-        // non-production only when running behind a HTTPS proxy so devs can
-        // test mixed-content warnings locally if desired.
-        $isProd = strtolower((string)getenv('APP_ENV')) === 'production';
         $behindTlsProxy = strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'
             && ClientIp::isTrustedProxy((string)($_SERVER['REMOTE_ADDR'] ?? ''));
         if ($isProd || $behindTlsProxy) {
