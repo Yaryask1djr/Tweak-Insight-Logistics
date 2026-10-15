@@ -89,4 +89,63 @@ final class SpatialHelper
     {
         return self::KANO_HUBS[$hubId] ?? null;
     }
+
+    /**
+     * Computes compass bearing in degrees (0 - 360) from point 1 to point 2.
+     */
+    public static function calculateBearing(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $lat1Rad = deg2rad($lat1);
+        $lat2Rad = deg2rad($lat2);
+        $deltaLngRad = deg2rad($lng2 - $lng1);
+
+        $y = sin($deltaLngRad) * cos($lat2Rad);
+        $x = cos($lat1Rad) * sin($lat2Rad) - sin($lat1Rad) * cos($lat2Rad) * cos($deltaLngRad);
+
+        $bearing = rad2deg(atan2($y, $x));
+        return round(fmod($bearing + 360.0, 360.0), 1);
+    }
+
+    /**
+     * Converts degrees (0 - 360) to 8-point compass cardinal direction.
+     */
+    public static function cardinalDirection(float $bearing): string
+    {
+        $cardinals = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        $index = (int)round($bearing / 45.0) % 8;
+        return $cardinals[$index];
+    }
+
+    /**
+     * Calculates realistic driver travel time and ETA for Kano metropolitan road transit.
+     * Assumes average urban speed of 26 km/h with 1.25 road winding/traffic factor.
+     */
+    public static function calculateDriverEta(
+        float $driverLat,
+        float $driverLng,
+        float $targetLat,
+        float $targetLng
+    ): array {
+        $distanceMeters = self::haversineDistanceMeters($driverLat, $driverLng, $targetLat, $targetLng);
+        $straightKm = $distanceMeters / 1000.0;
+        
+        // Road network factor: Kano urban street routing typically adds ~25% over direct line
+        $roadDistanceKm = round($straightKm * 1.25, 2);
+        
+        // Average speed: 26 km/h (Kano metropolitan traffic with tricycles and dispatch bikes)
+        $travelMinutes = ($roadDistanceKm / 26.0) * 60.0;
+        $etaMinutes = max(1, (int)round($travelMinutes + 2)); // 2-min buffer for stop/handoff
+
+        $bearing = self::calculateBearing($driverLat, $driverLng, $targetLat, $targetLng);
+        $cardinal = self::cardinalDirection($bearing);
+
+        return [
+            'distance_km'        => $roadDistanceKm,
+            'direct_km'          => round($straightKm, 2),
+            'eta_minutes'        => $etaMinutes,
+            'eta_formatted'      => $etaMinutes <= 2 ? 'Under 3 mins' : "{$etaMinutes} mins",
+            'bearing_degrees'    => $bearing,
+            'cardinal_direction' => $cardinal,
+        ];
+    }
 }

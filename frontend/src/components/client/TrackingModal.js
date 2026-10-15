@@ -171,10 +171,10 @@ const TrackingModal = ({ delivery, onClose }) => {
                             </div>
                             <div className="text-sm-end border-start-sm ps-sm-3">
                                 <small className="text-muted text-uppercase fw-semibold d-block" style={{ fontSize: '0.72rem', letterSpacing: '0.5px' }}>
-                                    {eta.label}
+                                    {liveLocation?.eta && !isDelivered ? 'Live Traffic ETA' : eta.label}
                                 </small>
                                 <span className={`fw-bold ${eta.isFinal ? 'text-success' : 'text-dark'}`} style={{ fontSize: '0.95rem' }}>
-                                    {eta.text}
+                                    {liveLocation?.eta && !isDelivered ? `~${liveLocation.eta.eta_formatted} (${liveLocation.eta.distance_km}km)` : eta.text}
                                 </span>
                             </div>
                         </div>
@@ -373,16 +373,73 @@ const TrackingModal = ({ delivery, onClose }) => {
                             </div>
                         </div>
 
+                        {/* Itemized Billing & Fare Receipt */}
+                        <div className="card p-3 bg-light border mb-4">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <h6 className="fw-bold text-dark mb-0" style={{ fontSize: '0.85rem' }}>
+                                    🧾 Itemized Billing & Fare Breakdown
+                                </h6>
+                                <span className={`badge ${delivery.payment_status === 'paid' ? 'bg-success' : 'bg-warning text-dark'}`} style={{ fontSize: '0.7rem' }}>
+                                    {delivery.payment_status === 'paid' ? '✓ Paid' : (delivery.payment_status || 'Unpaid').toUpperCase()}
+                                </span>
+                            </div>
+                            <div className="row g-2 small text-muted">
+                                <div className="col-6 col-sm-3">
+                                    <span className="d-block" style={{ fontSize: '0.72rem' }}>Base Metro Fare</span>
+                                    <strong className="text-dark">₦{Number(liveLocation?.invoice?.base_cost ?? delivery.base_cost ?? 750).toLocaleString()}</strong>
+                                </div>
+                                <div className="col-6 col-sm-3">
+                                    <span className="d-block" style={{ fontSize: '0.72rem' }}>Weight & Surcharge</span>
+                                    <strong className="text-dark">₦{Number((liveLocation?.invoice?.weight_charge ?? delivery.weight_charge ?? 0) + (liveLocation?.invoice?.fragile_charge ?? delivery.fragile_charge ?? 0)).toLocaleString()}</strong>
+                                </div>
+                                <div className="col-6 col-sm-3">
+                                    <span className="d-block" style={{ fontSize: '0.72rem' }}>Transit Distance</span>
+                                    <strong className="text-dark">{delivery.distance_km || 0} km</strong>
+                                </div>
+                                <div className="col-6 col-sm-3">
+                                    <span className="d-block" style={{ fontSize: '0.72rem' }}>Total Amount</span>
+                                    <strong className="text-primary fs-6">₦{Number(delivery.total_cost).toLocaleString()}</strong>
+                                </div>
+                            </div>
+                            <div className="d-flex justify-content-end mt-2 pt-2 border-top">
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 py-1 px-2"
+                                    style={{ fontSize: '0.75rem' }}
+                                    onClick={handlePrintReceipt}
+                                >
+                                    🖨️ Print Digital Receipt
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Live GPS Map section */}
                         <div>
                             <div className="d-flex justify-content-between align-items-center mb-2">
                                 <h6 className="fw-bold text-dark mb-0" style={{ fontSize: '0.9rem' }}>
                                     🛰️ Live Driver Location (GPS)
                                 </h6>
-                                <span className={`badge ${liveLocation?.is_live ? 'bg-success' : 'bg-secondary'}`} style={{ fontSize: '0.7rem' }}>
-                                    {liveLocation?.is_live ? '● Live Telemetry' : 'Offline / Periodic'}
-                                </span>
+                                <div className="d-flex align-items-center gap-2">
+                                    {liveLocation?.breadcrumbs?.length > 0 && (
+                                        <span className="badge bg-info-subtle text-info border border-info-subtle" style={{ fontSize: '0.7rem' }}>
+                                            📍 {liveLocation.breadcrumbs.length} Route Breadcrumbs
+                                        </span>
+                                    )}
+                                    <span className={`badge ${liveLocation?.is_live ? 'bg-success' : 'bg-secondary'}`} style={{ fontSize: '0.7rem' }}>
+                                        {liveLocation?.is_live ? '● Live Telemetry' : 'Offline / Periodic'}
+                                    </span>
+                                </div>
                             </div>
+                            {liveLocation?.eta && (
+                                <div className="alert alert-info py-2 px-3 mb-2 small d-flex flex-wrap align-items-center justify-content-between gap-2" style={{ fontSize: '0.8rem' }}>
+                                    <span>
+                                        🚀 <strong>Traffic ETA:</strong> ~{liveLocation.eta.eta_formatted} ({liveLocation.eta.distance_km} km away)
+                                    </span>
+                                    <span>
+                                        🧭 Bearing: <strong>{liveLocation.compass_cardinal || 'En Route'} ({Math.round(liveLocation.heading_degrees || 0)}°)</strong>
+                                    </span>
+                                </div>
+                            )}
                             <p className="small text-muted mb-2" style={{ fontSize: '0.8rem' }}>
                                 GPS telemetry streams while this delivery is actively in transit.
                             </p>

@@ -58,6 +58,13 @@ const LiveLocationMap = ({ location, pickup, destination, height = 260 }) => {
     const heading = Number(location?.heading_degrees ?? location?.heading);
     const bearing = Number.isFinite(heading) && heading >= 0 && heading <= 360 ? heading : 0;
 
+    const breadcrumbPoints = useMemo(() => {
+        if (!Array.isArray(location?.breadcrumbs) || location.breadcrumbs.length === 0) return [];
+        return location.breadcrumbs
+            .map(b => toPoint(b))
+            .filter(Boolean);
+    }, [location?.breadcrumbs]);
+
     if (!driverPosition) {
         return <div className="live-location-map live-location-map--empty border rounded bg-light d-flex align-items-center justify-content-center text-muted" style={{ '--live-map-height': `${height}px` }}>Awaiting the first GPS location.</div>;
     }
@@ -70,11 +77,19 @@ const LiveLocationMap = ({ location, pickup, destination, height = 260 }) => {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <FollowLiveLocation position={driverPosition} route={route} />
+                {/* Planned Route Line */}
                 {route.length > 0 && <Polyline positions={route} pathOptions={{ color: '#c9182b', weight: 4, opacity: 0.8, dashArray: '8 8' }} />}
+                {/* Real-Time Breadcrumb Trail */}
+                {breadcrumbPoints.length > 1 && <Polyline positions={breadcrumbPoints} pathOptions={{ color: '#0ea5e9', weight: 4, opacity: 0.8 }} />}
                 {pickupPosition && <Marker position={pickupPosition} icon={pointIcon('live-map-point live-map-point--pickup', 'Pickup')}><Tooltip direction="top">Pickup</Tooltip></Marker>}
                 {destinationPosition && <Marker position={destinationPosition} icon={pointIcon('live-map-point live-map-point--destination', 'Destination')}><Tooltip direction="top">Destination</Tooltip></Marker>}
                 {location?.accuracy_m > 0 && <Circle center={driverPosition} radius={location.accuracy_m} pathOptions={{ color: '#2563eb', fillOpacity: 0.08, weight: 1 }} />}
-                <Marker position={driverPosition} icon={driverIcon(bearing)} zIndexOffset={1000}><Tooltip direction="top">Driver{Number.isFinite(heading) ? ` · heading ${Math.round(bearing)}°` : ''}</Tooltip></Marker>
+                <Marker position={driverPosition} icon={driverIcon(bearing)} zIndexOffset={1000}>
+                    <Tooltip direction="top">
+                        Driver{Number.isFinite(heading) ? ` · heading ${Math.round(bearing)}° (${location?.compass_cardinal || ''})` : ''}
+                        {location?.eta ? ` · ETA ${location.eta.eta_formatted}` : ''}
+                    </Tooltip>
+                </Marker>
             </MapContainer>
         </div>
     );

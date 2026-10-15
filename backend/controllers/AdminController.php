@@ -16,6 +16,7 @@ require_once __DIR__ . '/../helpers/cursor_pagination.php';
 require_once __DIR__ . '/../helpers/listing_query.php';
 require_once __DIR__ . '/../helpers/csv_export.php';
 require_once __DIR__ . '/../helpers/delivery_resolution.php';
+require_once __DIR__ . '/../helpers/telemetry_stream.php';
 require_once __DIR__ . '/ClientKycController.php';
 
 class AdminController
@@ -212,6 +213,13 @@ class AdminController
 
             return $data;
         });
+
+        // Dynamic live telemetry streaming metrics (evaluated on every poll)
+        $stats['telemetry_stream'] = [
+            'buffer_depth'      => TelemetryStream::getBufferLength(),
+            'redis_connected'   => TelemetryStream::getClient() !== null,
+            'active_in_transit' => (int)($stats['in_transit'] ?? 0),
+        ];
 
         Response::json($stats, 'Operations statistics retrieved.');
     }

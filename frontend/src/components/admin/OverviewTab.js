@@ -79,6 +79,42 @@ const OverviewTab = ({ onNavigate }) => {
                 ))}
             </div>
 
+            {/* Live Driver Telemetry & Streaming Engine Health */}
+            <div className="card border-0 shadow-sm custom-card p-3 mb-4">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div className="d-flex align-items-center gap-2">
+                        <span className="fs-5">📡</span>
+                        <div>
+                            <strong className="d-block" style={{ fontSize: "0.9rem" }}>
+                                Live Telemetry & Redis Streaming Engine
+                            </strong>
+                            <small className="text-muted">
+                                Real-time GPS buffer and asynchronous batch flushing for Kano metropolitan fleet.
+                            </small>
+                        </div>
+                    </div>
+                    <div className="d-flex flex-wrap align-items-center gap-3">
+                        <div className="d-flex align-items-center gap-2">
+                            <span className="text-muted small">Redis Buffer:</span>
+                            <span className={`badge ${stats.telemetry_stream?.buffer_depth > 50 ? 'bg-warning text-dark' : 'bg-primary'}`}>
+                                {stats.telemetry_stream?.buffer_depth ?? 0} queued
+                            </span>
+                        </div>
+                        <div className="d-flex align-items-center gap-2">
+                            <span className="text-muted small">Streaming Engine:</span>
+                            <span className={`badge ${stats.telemetry_stream?.redis_connected ? 'bg-success' : 'bg-secondary'}`}>
+                                {stats.telemetry_stream?.redis_connected ? '● Streaming Online' : '○ Standby / Direct MySQL'}
+                            </span>
+                        </div>
+                        {onNavigate && (
+                            <button className="btn btn-sm btn-outline-primary py-1 px-2" onClick={() => onNavigate("live-tracking")}>
+                                Live Fleet Map 🛰️
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
             {/* Concise Operational Summaries Grid */}
             <div className="row g-3 mb-4">
                 {/* 1. Order Lifecycle Summary */}

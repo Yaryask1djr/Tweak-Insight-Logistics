@@ -5,6 +5,7 @@ require_once __DIR__ . '/../helpers/cache_helper.php';
 require_once __DIR__ . '/../helpers/monitoring.php';
 require_once __DIR__ . '/../helpers/cursor_pagination.php';
 require_once __DIR__ . '/../helpers/telemetry_stream.php';
+require_once __DIR__ . '/../helpers/spatial_helper.php';
 
 /** Role-scoped live GPS read model. Exact coordinates are never public. */
 final class LiveTrackingController
@@ -23,6 +24,8 @@ final class LiveTrackingController
 
         $query = $db->prepare("
             SELECT d.id, d.tracking_number, d.client_id, d.delivery_person_id, d.status, d.tracking_started_at,
+                   d.pickup_latitude, d.pickup_longitude, d.delivery_latitude, d.delivery_longitude,
+                   d.pickup_address, d.delivery_address, d.base_cost, d.weight_charge, d.fragile_charge, d.total_cost, d.payment_status,
                    u.full_name AS driver_name
             FROM deliveries d
             LEFT JOIN users u ON u.id = d.delivery_person_id
@@ -84,6 +87,17 @@ final class LiveTrackingController
                 ], 300);
             }
         }
+
+        // 3. Fetch recent breadcrumbs trail for route visualization (last 10 pings)
+        $breadcrumbStmt = $db->prepare('
+            SELECT latitude, longitude, accuracy_m, heading_degrees, recorded_at
+            FROM delivery_location_events
+            WHERE delivery_id = ?
+            ORDER BY id DESC
+            LIMIT 10
+        ');
+        $breadcrumbStmt->execute([$delivery['id']]);
+        $delivery['breadcrumbs'] = array_reverse($breadcrumbStmt->fetchAll(PDO::FETCH_ASSOC));
 
         self::respond($delivery);
     }
@@ -350,14 +364,48 @@ final class LiveTrackingController
                 'stale_after_seconds' => self::STALE_AFTER_SECONDS,
             ]);
         }
+
+        $heading = $delivery['last_location_heading_degrees'] === null ? null : (float)$delivery['last_location_heading_degrees'];
+        $cardinal = $heading !== null ? SpatialHelper::cardinalDirection($heading) : null;
+
+        $destLat = isset($delivery['delivery_latitude']) && $delivery['delivery_latitude'] !== null ? (float)$delivery['delivery_latitude'] : null;
+        $destLng = isset($delivery['delivery_longitude']) && $delivery['delivery_longitude'] !== null ? (float)$delivery['delivery_longitude'] : null;
+
+        $eta = null;
+        if ($delivery['last_location_latitude'] !== null && $delivery['last_location_longitude'] !== null && $destLat !== null && $destLng !== null) {
+            $eta = SpatialHelper::calculateDriverEta(
+                (float)$delivery['last_location_latitude'],
+                (float)$delivery['last_location_longitude'],
+                $destLat,
+                $destLng
+            );
+        }
+
+        $invoice = [
+            'base_cost'      => (float)($delivery['base_cost'] ?? 0.0),
+            'weight_charge'  => (float)($delivery['weight_charge'] ?? 0.0),
+            'fragile_charge' => (float)($delivery['fragile_charge'] ?? 0.0),
+            'total_cost'     => (float)($delivery['total_cost'] ?? 0.0),
+            'payment_status' => $delivery['payment_status'] ?? 'unpaid',
+            'currency'       => 'NGN',
+        ];
+
         return [
-            'delivery_id' => (int)$delivery['id'], 'tracking_number' => $delivery['tracking_number'], 'status' => $delivery['status'], 'driver_name' => $delivery['driver_name'],
-            'latitude' => $delivery['last_location_latitude'] === null ? null : (float)$delivery['last_location_latitude'],
-            'longitude' => $delivery['last_location_longitude'] === null ? null : (float)$delivery['last_location_longitude'],
-            'accuracy_m' => $delivery['last_location_accuracy_m'] === null ? null : (float)$delivery['last_location_accuracy_m'],
-            'heading_degrees' => $delivery['last_location_heading_degrees'] === null ? null : (float)$delivery['last_location_heading_degrees'],
-            'recorded_at' => $delivery['last_location_at'], 'is_live' => (bool)$fresh,
+            'delivery_id'         => (int)$delivery['id'],
+            'tracking_number'     => $delivery['tracking_number'],
+            'status'              => $delivery['status'],
+            'driver_name'         => $delivery['driver_name'],
+            'latitude'            => $delivery['last_location_latitude'] === null ? null : (float)$delivery['last_location_latitude'],
+            'longitude'           => $delivery['last_location_longitude'] === null ? null : (float)$delivery['last_location_longitude'],
+            'accuracy_m'          => $delivery['last_location_accuracy_m'] === null ? null : (float)$delivery['last_location_accuracy_m'],
+            'heading_degrees'     => $heading,
+            'compass_cardinal'    => $cardinal,
+            'recorded_at'         => $delivery['last_location_at'],
+            'is_live'             => (bool)$fresh,
             'stale_after_seconds' => self::STALE_AFTER_SECONDS,
+            'eta'                 => $eta,
+            'breadcrumbs'         => $delivery['breadcrumbs'] ?? [],
+            'invoice'             => $invoice,
         ];
     }
 }
