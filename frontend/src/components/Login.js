@@ -12,6 +12,7 @@ import { fieldClassName, ValidationFeedback, validators } from './common/formVal
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [touched, setTouched] = useState({});
     const [loading, setLoading] = useState(false);
@@ -95,17 +96,28 @@ const Login = () => {
                     </div>
                     <div className="mb-3">
                         <label htmlFor="login-password" className="form-label small fw-semibold text-muted">Password</label>
-                        <input 
-                            id="login-password"
-                            type="password" 
-                            placeholder="••••••••"
-                            value={password} 
-                            onChange={e => { setPassword(e.target.value); touch('password'); }}
-                            onBlur={() => touch('password')}
-                            className={fieldClassName('form-control py-2', password, touched.password, errors.password)}
-                            aria-invalid={Boolean(touched.password && errors.password)}
-                            required 
-                        />
+                        <div className="input-group">
+                            <input 
+                                id="login-password"
+                                type={showPassword ? 'text' : 'password'} 
+                                placeholder="••••••••"
+                                value={password} 
+                                onChange={e => { setPassword(e.target.value); touch('password'); }}
+                                onBlur={() => touch('password')}
+                                className={fieldClassName('form-control py-2', password, touched.password, errors.password)}
+                                aria-invalid={Boolean(touched.password && errors.password)}
+                                required 
+                            />
+                            <button
+                                type="button"
+                                className="btn btn-outline-secondary"
+                                onClick={() => setShowPassword(!showPassword)}
+                                tabIndex={-1}
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            >
+                                {showPassword ? '👁️' : '🔒'}
+                            </button>
+                        </div>
                         <ValidationFeedback touched={touched.password} error={errors.password} validMessage="Password entered." />
                     </div>
                     <button className="btn btn-primary w-100 py-2 fw-semibold d-flex align-items-center justify-content-center" disabled={loading}>
