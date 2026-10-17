@@ -85,7 +85,7 @@ function App() {
     return (
         <AuthProvider>
             <ToastNotification />
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <ErrorBoundary
                     fallbackTitle="Page Display Error"
                     fallbackMessage="An unexpected error occurred while loading this page. Click below to reload or return to home."
