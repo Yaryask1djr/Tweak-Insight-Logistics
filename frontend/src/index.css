@@ -121,6 +121,10 @@
 
 html {
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: clip;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -129,9 +133,19 @@ body {
   color: var(--text-body);
   margin: 0;
   padding: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
+}
+
+#root {
+  max-width: 100%;
+  overflow-x: clip;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 /* ==================================================
@@ -3546,13 +3560,170 @@ textarea.form-control {
   .cta-glass-card { padding: 50px 36px; }
 }
 
-@media (max-width: 23.4rem) {
+/* ==========================================================================
+   Mobile Layout, Viewport Resolution & Ergonomics Overhaul
+   ========================================================================== */
+
+/* Universal container boundary enforcement to prevent sideways wobble */
+.container-fluid,
+.row,
+.card,
+.table-responsive,
+.dashboard-shell,
+.dashboard-main,
+.dashboard-content,
+.driver-dashboard-content {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Tablet & Mobile Screens (<= 767.98px) */
+@media (max-width: 767.98px) {
+  /* Navigation & Glass Bar */
+  .glass-nav { padding-inline: 12px; }
+  .brand-logo-image { height: 38px; }
+  
+  /* Dashboard Header */
+  .dashboard-header,
+  .app-navbar.dashboard-header {
+    min-height: 56px !important;
+    padding: 8px 12px !important;
+  }
+  .dashboard-header .container-fluid {
+    flex-wrap: nowrap;
+    gap: 6px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .dashboard-header .navbar-brand {
+    font-size: 0.92rem !important;
+    line-height: 1.2;
+    margin: 0;
+    max-width: clamp(140px, 46vw, 240px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dashboard-header .navbar-brand .badge {
+    display: none !important;
+  }
+  .dashboard-header .btn-outline-light,
+  .driver-contrast-btn {
+    font-size: 0.8rem;
+    padding-inline: 8px !important;
+    min-height: 38px;
+  }
+  
+  /* Content Gutters: reduce 48px wasted padding down to 12px */
+  .dashboard-content,
+  .driver-dashboard-content,
+  .container-fluid.dashboard-content,
+  .container-fluid.driver-dashboard-content {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    padding-top: 14px !important;
+    padding-bottom: 16px !important;
+  }
+  .dashboard-shell .row.g-4,
+  .driver-dashboard .row.g-4 {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+  .custom-card,
+  .dashboard-shell .card,
+  .driver-dashboard .card {
+    border-radius: 14px !important;
+    padding: 14px 12px !important;
+  }
+
+  /* Admin Status Strip */
+  .admin-status-strip {
+    padding-block: 6px;
+  }
+  .admin-status-strip .container-fluid {
+    padding-inline: 12px !important;
+  }
+  .admin-status-strip-inner {
+    font-size: 0.78rem;
+    gap: 8px 12px;
+  }
+  .admin-mobile-quicktabs {
+    top: 56px;
+  }
+
+  /* Modals on Mobile Viewports */
+  .app-modal-backdrop .modal-dialog {
+    margin: 8px auto;
+    max-width: calc(100vw - 16px);
+    width: 100%;
+  }
+  .app-modal-backdrop .modal-header,
+  .app-modal-backdrop .modal-footer {
+    padding: 12px 14px !important;
+  }
+  .app-modal-backdrop .modal-body {
+    padding: 14px 12px !important;
+  }
+
+  /* Auth & Register Pages */
+  .auth-page {
+    padding: 20px 12px !important;
+  }
+  .auth-card {
+    padding: 20px 16px !important;
+  }
+  .auth-card .d-flex.justify-content-center.gap-3 {
+    flex-wrap: wrap;
+    gap: 8px 12px !important;
+  }
+
+  /* Interactive Maps */
+  .coverage-map-canvas {
+    height: clamp(300px, 52vh, 400px);
+  }
+  .coverage-zone-chip {
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    white-space: nowrap;
+  }
+}
+
+/* Compact Phones (<= 480px, e.g. iPhone SE, Galaxy S, Pixel) */
+@media (max-width: 480px) {
   .glass-nav { padding-inline: 8px; }
   .brand-logo-image { height: 34px; }
-  .theme-toggle-compact { height: 40px; min-height: 40px; width: 40px; }
-  .dashboard-header .navbar-brand .badge { display: none; }
-  .dashboard-header .btn-outline-light { padding-inline: 8px !important; }
-  .section-eyebrow { font-size: 0.67rem; padding-inline: 10px; }
+  .theme-toggle-compact {
+    height: 38px;
+    min-height: 38px;
+    padding: 6px;
+    width: 38px;
+    min-width: 38px;
+  }
+  .dashboard-header .navbar-brand {
+    font-size: 0.85rem !important;
+    max-width: 140px;
+  }
+  .driver-dashboard-header .badge {
+    font-size: 0.68rem !important;
+    padding-inline: 6px !important;
+  }
+  .dashboard-header .btn-outline-light {
+    font-size: 0.75rem;
+    padding-inline: 6px !important;
+  }
+  .section-eyebrow {
+    font-size: 0.67rem;
+    padding-inline: 8px;
+  }
+  .tracking-node .label {
+    font-size: 0.74rem;
+  }
+  .auth-card {
+    padding: 16px 12px !important;
+  }
+  .auth-card h3 {
+    font-size: 1.25rem;
+  }
 }
 
 /* ==========================================================================
