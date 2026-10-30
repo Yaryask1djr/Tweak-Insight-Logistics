@@ -82,3 +82,7 @@ httpd.conf.bak
 .parcel-cache/
 .eslintcache
 /backend/tools/
+
+__pycache__/
+*.py[cod]
+

@@ -1,0 +1,73 @@
+# ==============================================================================
+# Tweak Insight Logistics - Backend (PHP 8.2-FPM Alpine)
+# ==============================================================================
+
+FROM php:8.2-fpm-alpine
+
+# Set build arguments and environment
+ENV COMPOSER_ALLOW_SUPERUSER=1 \
+    APP_ENV=production
+
+# Install system dependencies & docker-php-extension-installer
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    unzip \
+    libzip-dev \
+    icu-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    shadow \
+    tzdata
+
+# Install PHP extensions required by Tweak Insight Logistics
+RUN install-php-extensions \
+    pdo_mysql \
+    bcmath \
+    opcache \
+    redis \
+    intl \
+    zip \
+    gd \
+    pcntl
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/local/bin/composer
+
+# Copy PHP and OPcache configuration
+COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-til.ini
+COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/99-opcache.ini
+
+# Set working directory
+WORKDIR /var/www/html/backend
+
+# Copy composer manifest and install dependencies
+COPY backend/composer.json backend/composer.lock* ./
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader || composer install --no-dev --no-interaction
+
+# Copy backend application source
+COPY backend/ ./
+
+# Copy entrypoint scripts and make executable
+COPY docker/entrypoint.backend.sh /usr/local/bin/entrypoint.backend.sh
+COPY docker/entrypoint.worker.sh /usr/local/bin/entrypoint.worker.sh
+RUN chmod +x /usr/local/bin/entrypoint.backend.sh /usr/local/bin/entrypoint.worker.sh
+
+# Ensure storage directories exist and have proper permissions
+RUN mkdir -p storage/logs storage/cache storage/exports storage/rate_limits storage/client-kyc storage/driver-documents \
+    && chown -R www-data:www-data storage public \
+    && chmod -R 775 storage
+
+# Healthcheck to probe PHP-FPM readiness
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET \
+        cgi-fcgi -bind -connect 127.0.0.1:9000 || php -r "require 'bootstrap.php'; echo 'OK';" || exit 1
+
+EXPOSE 9000
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.backend.sh"]
+CMD ["php-fpm"]

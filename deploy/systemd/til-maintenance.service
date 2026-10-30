@@ -1,0 +1,26 @@
+[Unit]
+Description=Tweak Insight Logistics - Nightly Database & Storage Maintenance
+Documentation=https://github.com/tweak-insight/logistics
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/tweak-insight-logistics/backend
+
+# Run every maintenance purge script in a deterministic order
+ExecStart=/usr/bin/php /var/www/tweak-insight-logistics/backend/scripts/run_all_maintenance.php
+
+# Hardening
+ProtectSystem=strict
+ReadWritePaths=/var/www/tweak-insight-logistics/backend/storage
+ProtectHome=true
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=til-maintenance
