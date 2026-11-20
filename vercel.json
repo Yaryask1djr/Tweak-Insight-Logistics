@@ -4,9 +4,8 @@
   "buildCommand": "if [ -d \"frontend\" ]; then cd frontend; fi && npm run build",
   "outputDirectory": "frontend/build",
   "functions": {
-    "api/index.php": {
-      "runtime": "vercel-php@0.6.0",
-      "includeFiles": "backend/**"
+    "api/*.php": {
+      "runtime": "vercel-php@0.9.0"
     }
   },
   "rewrites": [
