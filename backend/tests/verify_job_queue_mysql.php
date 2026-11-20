@@ -15,6 +15,7 @@ $db = new PDO($dsn, (string)getenv('QUEUE_TEST_MYSQL_USER'), (string)getenv('QUE
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => false,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
+$db->exec("SET time_zone = '+00:00'");
 $schema = file_get_contents(__DIR__ . '/../database/schema.sql');
 if (!preg_match('/CREATE TABLE IF NOT EXISTS job_queue \([\s\S]*?\) ENGINE=InnoDB[^;]*;/', $schema, $match)) {
     throw new RuntimeException('Queue schema not found.');
