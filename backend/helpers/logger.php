@@ -13,15 +13,20 @@ require_once __DIR__ . '/log_sanitizer.php';
  */
 class Logger
 {
-    private static string $logDir = __DIR__ . '/../storage/logs';
+    private static function getLogDir(): string
+    {
+        $base = getenv('STORAGE_PATH') ?: (defined('STORAGE_PATH') ? STORAGE_PATH : (__DIR__ . '/../storage'));
+        return $base . '/logs';
+    }
 
     /**
      * Initialize error handlers and directory.
      */
     public static function init(): void
     {
-        if (!is_dir(self::$logDir)) {
-            @mkdir(self::$logDir, 0755, true);
+        $logDir = self::getLogDir();
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
         }
 
         $isProduction = SecurityConfig::isProductionLike();
@@ -52,10 +57,11 @@ class Logger
      */
     public static function getLogFilePath(): string
     {
-        if (!is_dir(self::$logDir)) {
-            @mkdir(self::$logDir, 0755, true);
+        $logDir = self::getLogDir();
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
         }
-        return self::$logDir . '/app-' . date('Y-m-d') . '.log';
+        return $logDir . '/app-' . date('Y-m-d') . '.log';
     }
 
     /**

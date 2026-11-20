@@ -35,7 +35,7 @@ if (!defined('ROOT_PATH')) {
 }
 
 if (!defined('STORAGE_PATH')) {
-    define('STORAGE_PATH', __DIR__ . '/storage');
+    define('STORAGE_PATH', getenv('STORAGE_PATH') ?: (__DIR__ . '/storage'));
 }
 
 // Initialize centralized error handling and file logging
