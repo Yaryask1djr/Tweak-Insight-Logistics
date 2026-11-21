@@ -36,11 +36,11 @@ RUN cd /app/backend \
     && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # Create a thin PHP stub in /app/public/index.php
-# Caddy's php_server directive will invoke this for /api/* routes
 RUN printf '<?php\nrequire_once "/app/backend/api/index.php";\n' > /app/public/index.php
 
-# Copy Caddy configuration
+# Copy Caddy configuration to both locations
 COPY Caddyfile /etc/caddy/Caddyfile
+COPY Caddyfile /etc/frankenphp/Caddyfile
 
 # Create writable temp storage
 RUN mkdir -p /tmp/storage/logs /tmp/storage/cache /tmp/storage/uploads \
@@ -48,12 +48,12 @@ RUN mkdir -p /tmp/storage/logs /tmp/storage/cache /tmp/storage/uploads \
     && chmod -R 777 /tmp/storage
 
 # Runtime environment defaults
+ENV PORT=80
 ENV STORAGE_PATH=/tmp/storage
 ENV QUEUE_DRIVER=mysql
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 
-# Vercel sets PORT — Caddy reads it from $PORT (see Caddyfile)
 EXPOSE 80
 
 CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

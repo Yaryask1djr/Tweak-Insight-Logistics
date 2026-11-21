@@ -38,6 +38,14 @@ if (!defined('STORAGE_PATH')) {
     define('STORAGE_PATH', getenv('STORAGE_PATH') ?: (__DIR__ . '/storage'));
 }
 
+// Ensure storage subdirectories exist (especially in ephemeral container /tmp)
+foreach (['logs', 'cache', 'uploads', 'client-kyc', 'driver-documents'] as $subDir) {
+    $targetDir = STORAGE_PATH . '/' . $subDir;
+    if (!is_dir($targetDir)) {
+        @mkdir($targetDir, 0777, true);
+    }
+}
+
 // Initialize centralized error handling and file logging
 require_once __DIR__ . '/helpers/logger.php';
 Logger::init();
