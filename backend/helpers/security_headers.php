@@ -44,10 +44,11 @@ class SecurityHeaders
         }
 
         $forwardedProto = strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        $isVercel = !empty($_SERVER['HTTP_X_VERCEL_ID']) || !empty(getenv('VERCEL'));
         $isHttps =
             (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
             || ((int)($_SERVER['SERVER_PORT'] ?? 0) === 443)
-            || ($forwardedProto === 'https' && ClientIp::isTrustedProxy((string)($_SERVER['REMOTE_ADDR'] ?? '')));
+            || ($forwardedProto === 'https' && ($isVercel || ClientIp::isTrustedProxy((string)($_SERVER['REMOTE_ADDR'] ?? ''))));
 
         if (!$isHttps) {
             $host = $_SERVER['HTTP_HOST'] ?? '';
@@ -78,8 +79,9 @@ class SecurityHeaders
             "worker-src 'self' blob:",
             "manifest-src 'self'",
         ];
+        $isVercel = !empty($_SERVER['HTTP_X_VERCEL_ID']) || !empty(getenv('VERCEL'));
         $behindTlsProxy = strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https'
-            && ClientIp::isTrustedProxy((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+            && ($isVercel || ClientIp::isTrustedProxy((string)($_SERVER['REMOTE_ADDR'] ?? '')));
         if ($isProd || $behindTlsProxy) {
             $policy[] = 'upgrade-insecure-requests';
         }
