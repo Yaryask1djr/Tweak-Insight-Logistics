@@ -86,3 +86,6 @@ httpd.conf.bak
 __pycache__/
 *.py[cod]
 
+
+storage/
+/storage/**

@@ -1,25 +1,3 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "if [ -d \"frontend\" ]; then cd frontend; fi && npm install",
-  "buildCommand": "if [ -d \"frontend\" ]; then cd frontend; fi && npm run build",
-  "outputDirectory": "frontend/build",
-  "functions": {
-    "api/*.php": {
-      "runtime": "vercel-php@0.9.0"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.php"
-    },
-    {
-      "source": "/api",
-      "destination": "/api/index.php"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json"
 }

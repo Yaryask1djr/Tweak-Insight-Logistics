@@ -68,6 +68,9 @@ class Database
         if (defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
             $options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = '+00:00'";
         }
+        if (defined('PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT') && $this->host !== '127.0.0.1' && $this->host !== 'localhost') {
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        }
 
         $maxAttempts = 3;
         $lastException = null;
