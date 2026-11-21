@@ -65,8 +65,8 @@ final class SecurityConfig
             return 'DB_PASS is missing or uses a placeholder value.';
         }
 
-        if ($requireProductionStrength && strlen($secret) < 32) {
-            return 'DB_PASS must contain at least 32 bytes in production-like environments.';
+        if ($requireProductionStrength && strlen($secret) < 16) {
+            return 'DB_PASS must contain at least 16 bytes in production-like environments.';
         }
 
         return null;

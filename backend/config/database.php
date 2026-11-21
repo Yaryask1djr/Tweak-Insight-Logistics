@@ -15,11 +15,11 @@ class Database
 
     public function __construct()
     {
-        $this->host = getenv('DB_HOST') ?: '127.0.0.1';
-        $this->db_name = getenv('DB_NAME') ?: 'tweak_insight_logistics_new';
-        $this->username = trim((string) (getenv('DB_USER') ?: ''));
-        $this->password = (string) (getenv('DB_PASS') ?: '');
-        $this->port = (int) (getenv('DB_PORT') ?: 3306);
+        $this->host = getenv('DB_HOST') ?: ($_ENV['DB_HOST'] ?? ($_SERVER['DB_HOST'] ?? '127.0.0.1'));
+        $this->db_name = getenv('DB_NAME') ?: ($_ENV['DB_NAME'] ?? ($_SERVER['DB_NAME'] ?? 'tweak_insight_logistics_new'));
+        $this->username = trim((string) (getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? ($_SERVER['DB_USER'] ?? ''))));
+        $this->password = (string) (getenv('DB_PASS') ?: ($_ENV['DB_PASS'] ?? ($_SERVER['DB_PASS'] ?? '')));
+        $this->port = (int) (getenv('DB_PORT') ?: ($_ENV['DB_PORT'] ?? ($_SERVER['DB_PORT'] ?? 3306)));
 
         $configurationError = SecurityConfig::databaseCredentialsError(
             $this->username,

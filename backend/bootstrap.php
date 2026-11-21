@@ -51,9 +51,9 @@ require_once __DIR__ . '/helpers/logger.php';
 Logger::init();
 
 $isProductionEnv = SecurityConfig::isProductionLike();
-$configuredJwt = (string)getenv('JWT_SECRET');
-$configuredDbUser = (string)getenv('DB_USER');
-$configuredDbPassword = (string)getenv('DB_PASS');
+$configuredJwt = (string)(getenv('JWT_SECRET') ?: ($_ENV['JWT_SECRET'] ?? ($_SERVER['JWT_SECRET'] ?? '')));
+$configuredDbUser = (string)(getenv('DB_USER') ?: ($_ENV['DB_USER'] ?? ($_SERVER['DB_USER'] ?? '')));
+$configuredDbPassword = (string)(getenv('DB_PASS') ?: ($_ENV['DB_PASS'] ?? ($_SERVER['DB_PASS'] ?? '')));
 $configurationErrors = array_filter([
     SecurityConfig::jwtSecretError($configuredJwt),
     SecurityConfig::databaseCredentialsError($configuredDbUser, $configuredDbPassword, $isProductionEnv),
