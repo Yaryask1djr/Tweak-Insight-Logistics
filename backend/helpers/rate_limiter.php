@@ -42,8 +42,9 @@ class RateLimiter
         $limit = self::$limits[$action] ?? ['max' => 10, 'window' => 600];
         $rateKey = hash('sha256', $ip . ':' . $action);
         $isProduction = strtolower((string)getenv('APP_ENV')) === 'production';
-        $allowDbFallback = filter_var(getenv('RATE_LIMIT_ALLOW_DB_FALLBACK') ?: 'false', FILTER_VALIDATE_BOOLEAN);
-        $driver = strtolower(trim((string)(getenv('RATE_LIMIT_DRIVER') ?: ($isProduction && !$allowDbFallback ? 'redis' : 'database'))));
+        $hasRedis = !empty(getenv('REDIS_HOST'));
+        $allowDbFallback = filter_var(getenv('RATE_LIMIT_ALLOW_DB_FALLBACK') ?: ($hasRedis ? 'false' : 'true'), FILTER_VALIDATE_BOOLEAN);
+        $driver = strtolower(trim((string)(getenv('RATE_LIMIT_DRIVER') ?: ($hasRedis ? 'redis' : 'database'))));
 
         // A production limiter defaults to redis. If Redis is unavailable or unconfigured,
         // it may fall back to atomic database buckets if RATE_LIMIT_ALLOW_DB_FALLBACK is enabled.

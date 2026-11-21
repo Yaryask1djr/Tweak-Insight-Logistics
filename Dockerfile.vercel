@@ -51,6 +51,8 @@ RUN mkdir -p /tmp/storage/logs /tmp/storage/cache /tmp/storage/uploads \
 ENV PORT=80
 ENV STORAGE_PATH=/tmp/storage
 ENV QUEUE_DRIVER=mysql
+ENV RATE_LIMIT_DRIVER=database
+ENV RATE_LIMIT_ALLOW_DB_FALLBACK=true
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 ENV VERCEL=1
