@@ -1,39 +1,30 @@
 {
-    frankenphp
-    order frankenphp before file_server
-    admin off
-    auto_https off
+	frankenphp
+	order frankenphp before file_server
+	admin off
+	auto_https off
 }
 
+# Vercel sets $PORT dynamically; default to 80
 :{$PORT:80} {
-    log {
-        output stderr
-        format console
-    }
+	log {
+		output stderr
+		format console
+	}
 
-    root * /app/public
-    encode zstd gzip
+	root * /app/public
+	encode zstd gzip
 
-    # Route /api/* requests to PHP entrypoint
-    handle /api/* {
-        php_server {
-            try_files {path} /index.php
-        }
-    }
+	# PHP API — pass full URI (including /api prefix) to PHP
+	# The PHP router in backend/api/index.php strips /api itself
+	handle /api/* {
+		root * /app/public
+		php_server
+	}
 
-    # Serve physical static assets directly
-    @static {
-        file
-        not path *.php
-    }
-
-    handle @static {
-        file_server
-    }
-
-    # SPA Fallback: Any other URL serves index.html for client-side routing
-    handle {
-        try_files {path} /index.html
-        file_server
-    }
+	# Serve real static files directly
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
 }

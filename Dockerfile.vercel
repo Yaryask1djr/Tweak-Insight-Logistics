@@ -5,7 +5,7 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --prefer-offline
 
 COPY frontend/ ./
 ENV CI=false
@@ -13,39 +13,47 @@ ENV REACT_APP_API_BASE_URL=/api
 RUN npm run build
 
 # ==============================================================================
-# Stage 2: Production FrankenPHP (Caddy + PHP 8.3)
+# Stage 2: Production — FrankenPHP (PHP 8.3 + Caddy)
 # ==============================================================================
-FROM dunglas/frankenphp:latest
+FROM dunglas/frankenphp:1-php8.3-alpine
 
-# Install required PHP extensions for Tweak Insight Logistics
-RUN install-php-extensions pdo_mysql bcmath opcache redis intl zip
+# Install required PHP extensions
+RUN install-php-extensions pdo_mysql bcmath opcache intl zip
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Copy built frontend to /app/public
+# Copy built React SPA
 COPY --from=frontend-builder /app/frontend/build /app/public
 
-# Copy backend files to /app/backend
+# Copy PHP backend
 COPY backend /app/backend
 
-# Install PHP dependencies via Composer
-RUN cd /app/backend && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader || composer install --no-dev --no-interaction
+# Install PHP Composer dependencies (no dev)
+RUN cd /app/backend \
+    && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-# Create PHP entrypoint in /app/public
-RUN echo "<?php require_once '/app/backend/api/index.php';" > /app/public/index.php
+# Create a thin PHP stub in /app/public/index.php
+# Caddy's php_server directive will invoke this for /api/* routes
+RUN printf '<?php\nrequire_once "/app/backend/api/index.php";\n' > /app/public/index.php
 
-# Copy Caddyfile
+# Copy Caddy configuration
 COPY Caddyfile /etc/caddy/Caddyfile
 
-# Ensure storage directories exist and have open permissions
-RUN mkdir -p /tmp/storage/logs /tmp/storage/cache /tmp/storage/uploads /tmp/storage/client-kyc /tmp/storage/driver-documents && \
-    chmod -R 777 /tmp/storage
+# Create writable temp storage
+RUN mkdir -p /tmp/storage/logs /tmp/storage/cache /tmp/storage/uploads \
+        /tmp/storage/client-kyc /tmp/storage/driver-documents \
+    && chmod -R 777 /tmp/storage
 
-ENV PORT=80
+# Runtime environment defaults
 ENV STORAGE_PATH=/tmp/storage
 ENV QUEUE_DRIVER=mysql
 ENV APP_ENV=production
+ENV APP_DEBUG=false
 
+# Vercel sets PORT — Caddy reads it from $PORT (see Caddyfile)
 EXPOSE 80
 
-CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]
+CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
